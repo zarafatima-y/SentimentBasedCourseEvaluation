@@ -23,7 +23,7 @@ def render_aspects_tab(config, viz_options):
         st.caption(
                 "📊 **Raw counts — not normalised.** Years with more student enrolment will "
                 "show higher bars. Cross-reference with the heatmap to see the sentiment "
-                "makeup of each count, and with the % radar charts above for a normalised view."
+                "makeup of each count."
             )
         with col1:
             counts = adf['aspect'].value_counts().reset_index()
@@ -100,9 +100,9 @@ def render_aspects_tab(config, viz_options):
         with col1:
             st.markdown("#### Aspect Frequency by Section")
             st.caption(
-                "📊 **Raw counts — not normalised.** Sections with more students will show "
-                "higher bars. Use the heatmap on the right to understand the sentiment "
-                "breakdown of each count."
+                "📊 **Raw counts — not normalised.** Years with more student enrolment will "
+                "show higher bars. Cross-reference with the heatmap to see the sentiment "
+                "makeup of each count."
             )
             asp_by_sec = pd.crosstab(adf['aspect'], adf['section'])
             if len(asp_by_sec) > 0:
@@ -131,10 +131,11 @@ def render_aspects_tab(config, viz_options):
         if viz_options.get('radar'):
             st.markdown("#### 🕸️ Aspect Radar — All Sections Combined")
             st.caption(
-                "**How to read:** *Counts* shows volume of discussion per aspect. "
-                "*Positive %* and *Negative %* show the sentiment split of those mentions. "
-                "Cross-reference counts with percentages — a high count + high negative % "
-                "is the strongest signal of a problem area."
+                "**How to read these charts:** The *Aspect Counts* radar shows how many times "
+                "each aspect was mentioned — larger area = more discussion. Use the *Positive %* "
+                "and *Negative %* radars to see the sentiment breakdown of those mentions. "
+                "For example, if 'difficulty' has a large count but high negative %, students "
+                "are talking about difficulty and finding it problematic."
             )
             rc1, rc2, rc3 = st.columns(3)
             fig_counts, _ = Visualizer.radar_from_aspect_df(
@@ -169,7 +170,7 @@ def render_aspects_tab(config, viz_options):
             st.caption(
                 "📊 **Raw counts — not normalised.** Years with more student enrolment will "
                 "show higher bars. Cross-reference with the heatmap to see the sentiment "
-                "makeup of each count, and with the % radar charts above for a normalised view."
+                "makeup of each count."
             )
             asp_by_yr = pd.crosstab(adf['aspect'], adf['academic_year'])
             if len(asp_by_yr) > 0:
@@ -183,10 +184,10 @@ def render_aspects_tab(config, viz_options):
             if viz_options.get('heatmaps'):
                 st.markdown("#### Aspect–Sentiment Heatmap by Year")
                 st.caption(
-                    "🗺️ **How to read:** Each row is a year-aspect pair. The three columns "
-                    "show how that aspect's mentions break down by sentiment. A bar chart "
-                    "count of 66 split mostly into Negative here means students raised that "
-                    "topic primarily as a concern, not a praise."
+                    "🗺️ **How to read:** Each row is a section-aspect pair. Columns show "
+                    "how many of that aspect's mentions were Negative, Neutral, or Positive. "
+                    "Use this alongside the bar chart — if an aspect has a high count on the "
+                    "left but most cells land in the Negative column here, that is a priority concern."
                 )
                 hm_fig = build_aspect_heatmap(
                     adf, 'academic_year', sentiment_col,
@@ -198,9 +199,12 @@ def render_aspects_tab(config, viz_options):
         if viz_options.get('radar'):
             st.markdown("#### 🕸️ Aspect Radar — All Years Combined")
             st.caption(
-                "**How to read:** *Counts* shows how often each aspect was discussed each year. "
-                "*Positive %* and *Negative %* show whether that discussion was favourable. "
-                "A shrinking negative % over years on an aspect = improvement over time."
+                "**How to read these charts:** The *Aspect Counts* radar shows how many times "
+                "each aspect was mentioned — larger area = more discussion. Use the *Positive %* "
+                "and *Negative %* radars to see the sentiment breakdown of those mentions. "
+                "For example, if 'difficulty' has a large count but high negative %, students "
+                "are talking about difficulty and finding it problematic."
+                "Note: A shrinking negative % over years on an aspect = improvement over time."
             )
             yr_groups = [str(y) for y in config['years']]
             rc1, rc2, rc3 = st.columns(3)
@@ -246,9 +250,9 @@ def render_aspects_tab(config, viz_options):
         with col1:
             st.markdown("#### Aspect Frequency by Course")
             st.caption(
-                "📊 Raw counts — not normalised. Courses with more students will show "
-                "higher bars. Use the Positive % and Negative % radar charts below for "
-                "a fair cross-course comparison since those normalise for review volume."
+                "📊 **Raw counts — not normalised.** Years with more student enrolment will "
+                "show higher bars. Cross-reference with the heatmap to see the sentiment "
+                "makeup of each count."
             )
             asp_by_cy = pd.crosstab(adf['aspect'], adf[grp])
             if len(asp_by_cy) > 0:
@@ -262,11 +266,10 @@ def render_aspects_tab(config, viz_options):
             if viz_options.get('heatmaps'):
                 st.markdown("#### Aspect–Sentiment Heatmap by Course")
                 st.caption(
-                    "🗺️ How to read: Each row is a course-aspect pair. The three columns "
-                    "show how many of that aspect's mentions were Negative, Neutral, or Positive. "
-                    "A high count in the Negative column means students raised that topic "
-                    "mainly as a concern for that course. Cross-reference with the bar chart "
-                    "on the left to see how many total mentions that represents."
+                    "🗺️ **How to read:** Each row is a section-aspect pair. Columns show "
+                    "how many of that aspect's mentions were Negative, Neutral, or Positive. "
+                    "Use this alongside the bar chart — if an aspect has a high count on the "
+                    "left but most cells land in the Negative column here, that is a priority concern."
                 )
                 hm_fig = build_aspect_heatmap(
                     adf, grp, sentiment_col,
@@ -278,10 +281,11 @@ def render_aspects_tab(config, viz_options):
         if viz_options.get('radar'):
             st.markdown("#### 🕸️ Aspect Radar — All Courses Combined")
             st.caption(
-                "**How to read:** *Counts* shows total aspect mentions per course — note that "
-                "courses with more students will naturally have higher counts. Use *Positive %* "
-                "and *Negative %* for fair cross-course comparison since percentages normalise "
-                "for review volume."
+                "**How to read these charts:** The *Aspect Counts* radar shows how many times "
+                "each aspect was mentioned — larger area = more discussion. Use the *Positive %* "
+                "and *Negative %* radars to see the sentiment breakdown of those mentions. "
+                "For example, if 'difficulty' has a large count but high negative %, students "
+                "are talking about difficulty and finding it problematic."
             )
             cy_groups = sorted(adf[grp].dropna().unique().tolist())
             rc1, rc2, rc3 = st.columns(3)
