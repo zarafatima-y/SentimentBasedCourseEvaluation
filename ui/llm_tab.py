@@ -451,6 +451,7 @@ ONE flowing report addressed to a single instructor (or faculty team). Structure
                 if last_stop > len(summary) // 2:
                     summary = summary[:last_stop + 1]
                 summary = summary.strip()
+                st.session_state['llm_summary_text'] = summary
 
                 if allowed_groups is not None:
                     # Remove sentences that reference hallucinated group labels
