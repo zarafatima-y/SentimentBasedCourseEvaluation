@@ -37,7 +37,7 @@ from ui.download_tab import render_download_tab
 # ---------------------------------------------------------------------------
 
 st.set_page_config(
-    page_title="Course Evaluation Analysis System",
+    page_title="Sentiment Based Course Evaluation Analysis System",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -76,9 +76,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------------------------------------------------------------------
-# Session state
-# ---------------------------------------------------------------------------
 
 def init_session_state():
     defaults = {
@@ -98,12 +95,9 @@ def init_session_state():
 
 init_session_state()
 
-# ---------------------------------------------------------------------------
-# Sidebar
-# ---------------------------------------------------------------------------
 
 with st.sidebar:
-    st.image("https://www.eapasa.co.za/wp-content/uploads/2023/03/customer-reviews-line-icon-vector.jpeg", width=80)
+    st.image("https://i.pinimg.com/1200x/73/c2/71/73c2710d795f627f0a22837ae6641651.jpg", width=80)
     st.markdown("## Navigation")
 
     stages = ["🍄 Upload", "🍄 Clean", "🍄 Analyze", "🍄 Results"]
@@ -133,16 +127,10 @@ with st.sidebar:
             del st.session_state[key]
         st.rerun()
 
-# ---------------------------------------------------------------------------
-# Main header
-# ---------------------------------------------------------------------------
 
-st.markdown("<h1 class='main-header'>💻 Course Evaluation Analysis System</h1>", unsafe_allow_html=True)
+st.markdown("<h1 class='main-header'>Sentiment Based Course Evaluation Analysis System</h1>", unsafe_allow_html=True)
 st.markdown("Upload course evaluation PDFs for comprehensive sentiment, aspect, and emotion analysis")
 
-# ===========================================================================
-# STAGE 1: UPLOAD
-# ===========================================================================
 
 if st.session_state.stage == 'upload':
     st.markdown("<h2 class='sub-header'>📤 Upload PDF Files</h2>", unsafe_allow_html=True)
@@ -233,9 +221,6 @@ Section(s): A, B
                 st.session_state.stage = 'preprocess'
                 st.rerun()
 
-# ===========================================================================
-# STAGE 2: PREPROCESS
-# ===========================================================================
 
 elif st.session_state.stage == 'preprocess':
     st.markdown("<h2 class='sub-header'> Data Cleaning & Preprocessing</h2>", unsafe_allow_html=True)
@@ -287,9 +272,6 @@ elif st.session_state.stage == 'preprocess':
     else:
         st.warning("No data loaded. Please upload PDFs first.")
 
-# ===========================================================================
-# STAGE 3: ANALYZE
-# ===========================================================================
 
 elif st.session_state.stage == 'analyze':
     st.markdown("<h2 class='sub-header'>🤖 Analysis Configuration</h2>", unsafe_allow_html=True)
@@ -698,9 +680,6 @@ elif st.session_state.stage == 'analyze':
     else:
         st.warning("No data available. Please complete preprocessing first.")
 
-# ===========================================================================
-# STAGE 4: RESULTS
-# ===========================================================================
 
 elif st.session_state.stage == 'results':
     st.markdown("<h2 class='sub-header'>📈 Analysis Results</h2>", unsafe_allow_html=True)
@@ -756,51 +735,41 @@ elif st.session_state.stage == 'results':
         tabs     = st.tabs(available_tabs)
         tab_dict = dict(zip(available_tabs, tabs))
 
-        # ===================================================================
-        # TAB: OVERVIEW
-        # ===================================================================
+        # Overview tab
         with tab_dict["📊 Overview"]:
             render_overview_tab(config)
 
-        # ===================================================================
-        # TAB: SENTIMENT
-        # ===================================================================
+        # Sentiment tab
         if "😊 Sentiment" in tab_dict:
             with tab_dict["😊 Sentiment"]:
                 render_sentiment_tab(config)
-        # ===================================================================
-        # TAB: ASPECTS
-        # ===================================================================
+       
+       # Aspect tab
         if "🔍 Aspects" in tab_dict:
             with tab_dict["🔍 Aspects"]:
                 render_aspects_tab(config, viz_options)
-        # ===================================================================
-        # TAB: EMOTIONS
-        # ===================================================================
+
+        # Emotionstab
         if "🎭 Emotions" in tab_dict:
             with tab_dict["🎭 Emotions"]:
                 render_emotions_tab(config)
-        # ===================================================================
-        # TAB: LLM SUMMARY
-        # ===================================================================
+
+        # LLM Summary tab
         if "🤖 LLM Summary" in tab_dict:
             with tab_dict["🤖 LLM Summary"]:
                 render_llm_tab(config)
-        # ===================================================================
-        # TAB: NUMERIC INSIGHTS
-        # ===================================================================
+
+        # Numeric Insights tab
         if "🔢 Numeric Insights" in tab_dict:
             with tab_dict["🔢 Numeric Insights"]:
                 render_numeric_tab(config)
-        # ===================================================================
-        # TAB: RQ2 — ASPECT PREDICTORS OF NEGATIVE EVALUATIONS
-        # ===================================================================
+
+        #Rq2 tab
         if "📉 RQ2: Aspect Predictors" in tab_dict:
             with tab_dict["📉 RQ2: Aspect Predictors"]:
                 render_rq2_tab(config)
-        # ===================================================================
-        # TAB: DOWNLOAD
-        # ===================================================================
+
+        #Download tab
         if "📥 Download" in tab_dict:
             with tab_dict["📥 Download"]:
                 render_download_tab(config)
@@ -816,9 +785,7 @@ elif st.session_state.stage == 'results':
     else:
         st.warning("No results available. Please run analysis first.")
 
-# ---------------------------------------------------------------------------
-# Footer
-# ---------------------------------------------------------------------------
+
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: gray; padding: 1rem;'>
