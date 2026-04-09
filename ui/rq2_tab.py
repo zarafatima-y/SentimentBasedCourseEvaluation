@@ -1,0 +1,391 @@
+import streamlit as st
+import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+
+
+def render_rq2_tab(config):
+    st.markdown("### 📉 RQ2: Which Aspects Most Predict Negative Course Evaluations?")
+
+    st.markdown(
+          "**Research Question:** To what extent does sentiment toward specific course aspects "
+
+                    "(e.g., instructor quality, assignments, workload) predict whether a student's overall "
+
+                    "course evaluation is negative?"
+    )
+    st.markdown("#### What is this analysis doing?")
+
+    st.caption(
+        "Since reviews are anonymous, we cannot link any individual student's comments to their "
+
+                    "overall rating. Instead, we work at the group level — each group is one section, year, "
+
+                    "or course depending on your analysis type. For each group, we calculate two things: "
+
+                    "what proportion of that group's overall reviews were negative, and what proportion of "
+
+                    "mentions for each aspect (e.g. difficulty, assessments, instructor) were negative. "
+
+                    "We then ask: when a group has a high negative rate for a particular aspect, does that "
+
+                    "group also tend to have a high overall negative review rate? If yes, that aspect is a "
+
+                    "predictor of negative evaluations."
+                    "This follows the approach of Pang, Lee & Vaithyanathan (2002), who established that "
+
+                    "sentiment features — in their case, word-level signals — can be used as predictors in "
+
+                    "a regression framework to classify or explain overall sentiment outcomes. More recently, "
+
+                    "Schouten & Frasincar (2016) extended this line of work specifically to aspect-level "
+
+                    "sentiment, showing that individual aspect sentiments carry predictive signal about "
+
+                    "overall satisfaction beyond what whole-text analysis captures. Our analysis applies "
+
+                    "the same principle: aspect-level negative rates are the predictors, and the group's "
+
+                    "overall negative review rate is the outcome. We use OLS linear regression to estimate "
+
+                    "which aspects most strongly drive that outcome. A positive coefficient means that when "
+
+                    "a group rates that aspect negatively, they also tend to rate the course negatively overall. "
+
+                    "A negative coefficient means the opposite — groups that struggle with that aspect still "
+
+                    "tend to leave positive overall reviews, suggesting it has less influence on overall perception."
+    )
+
+    st.caption(
+
+                    "References: Pang, B., Lee, L., & Vaithyanathan, S. (2002). Thumbs up? Sentiment "
+
+                    "classification using machine learning techniques. EMNLP. "
+
+                    "Schouten, K., & Frasincar, F. (2016). Survey on aspect-level sentiment analysis. "
+
+                    "IEEE Transactions on Knowledge and Data Engineering, 28(3), 813–830."
+
+                )
+
+
+    st.info(
+        "Note: this model requires at least 2 groups to fit. With only 2 groups the model "
+        "will fit perfectly (R² = 1.0) but coefficients are unreliable — treat results as "
+        "descriptive only. For more robust estimates, use 3 or more groups by selecting "
+        "Compare Years or Cross-Course with additional years or courses. "
+        "The more groups, the more meaningful the coefficients."
+    )
+
+    st.divider()
+
+    adf_rq2  = st.session_state.aspect_df
+    main_rq2 = st.session_state.df
+
+    if adf_rq2 is None or len(adf_rq2) == 0:
+        st.warning("No aspect data available. Please run aspect analysis first.")
+        return
+    if 'sentiment' not in main_rq2.columns:
+        st.warning("No sentiment data available. Please run sentiment analysis first.")
+        return
+
+    s_col_rq2 = (
+        'aspect_sentiment'
+        if 'aspect_sentiment' in adf_rq2.columns
+        else 'sentiment'
+    )
+
+    if config['type'] == "🔄 Compare Sections (Same Course, Same Year)":
+        grp_rq2 = 'section'
+    elif config['type'] == "📅 Compare Years (Same Course)":
+        grp_rq2 = 'academic_year'
+    elif config['type'] == "🔬 Cross-Course Comparison":
+        grp_rq2 = 'course_year' if 'course_year' in adf_rq2.columns else 'course_code'
+        if 'course_year' not in adf_rq2.columns and 'course_year' in main_rq2.columns:
+            cy_map_rq2 = (
+                main_rq2[['review', 'course_year']]
+                .drop_duplicates('review')
+                .set_index('review')['course_year']
+            )
+            adf_rq2 = adf_rq2.copy()
+            adf_rq2['course_year'] = adf_rq2['review'].map(cy_map_rq2)
+            adf_rq2 = adf_rq2.dropna(subset=['course_year'])
+    else:
+        grp_rq2 = 'section'
+
+    all_aspects = sorted(adf_rq2['aspect'].dropna().unique().tolist())
+    groups_rq2  = sorted(main_rq2[grp_rq2].dropna().unique().tolist()) if grp_rq2 in main_rq2.columns else []
+
+    if len(groups_rq2) < 2:
+        st.warning(
+            f"Only {len(groups_rq2)} group(s) found. At least 2 groups are needed to fit the model. "
+            "Try Compare Sections, Compare Years, or Cross-Course analysis."
+        )
+        st.markdown("#### Aspect Negative Rate by Group")
+        raw_rows = []
+        for gv in groups_rq2:
+            sub = adf_rq2[adf_rq2[grp_rq2] == gv] if grp_rq2 in adf_rq2.columns else adf_rq2
+            for asp in all_aspects:
+                asp_sub = sub[sub['aspect'] == asp]
+                total = len(asp_sub)
+                if total == 0:
+                    continue
+                neg_pct = round((asp_sub[s_col_rq2] == 'Negative').sum() / total * 100, 1)
+                raw_rows.append({grp_rq2: gv, 'Aspect': asp, 'Negative %': neg_pct, 'Mentions': total})
+        if raw_rows:
+            raw_df = pd.DataFrame(raw_rows)
+            pivot_raw = raw_df.pivot_table(index='Aspect', columns=grp_rq2, values='Negative %').round(1)
+            st.dataframe(pivot_raw, use_container_width=True)
+        return
+
+    X_rows, y_vals, group_labels = [], [], []
+    for gv in groups_rq2:
+        sub_asp  = adf_rq2[adf_rq2[grp_rq2] == gv] if grp_rq2 in adf_rq2.columns else adf_rq2
+        sub_main = main_rq2[main_rq2[grp_rq2] == gv] if grp_rq2 in main_rq2.columns else main_rq2
+
+        total_reviews = len(sub_main)
+        if total_reviews == 0:
+            continue
+
+        neg_rate = (sub_main['sentiment'] == 'Negative').sum() / total_reviews
+
+        feat_row = {}
+        for asp in all_aspects:
+            asp_sub = sub_asp[sub_asp['aspect'] == asp]
+            total_asp = len(asp_sub)
+            feat_row[asp] = (
+                (asp_sub[s_col_rq2] == 'Negative').sum() / total_asp
+                if total_asp > 0 else 0.0
+            )
+        X_rows.append(feat_row)
+        y_vals.append(neg_rate)
+        group_labels.append(str(gv))
+
+    X_df = pd.DataFrame(X_rows, index=group_labels).fillna(0)
+    y    = np.array(y_vals)
+
+    st.markdown("#### Model")
+    st.markdown(
+        "We apply OLS linear regression where the outcome is the "
+        "proportion of negative reviews per group, and the predictors are the "
+        "proportion of negative mentions per aspect:"
+    )
+    st.latex(
+        r"\log\left(\frac{p_{neg}}{1 - p_{neg}}\right) = "
+        r"\beta_0 + \sum_{k=1}^{K} \beta_k \cdot \text{NegRate}_{k}"
+    )
+    st.caption(
+        "p_neg = proportion of overall negative reviews in the group. "
+        "NegRate_k = proportion of negative mentions for aspect k. "
+        "β_k = coefficient for aspect k — a larger positive β means that aspect "
+        "is a stronger predictor of negative overall evaluations."
+    )
+
+    st.divider()
+
+    var_mask   = X_df.std() > 0
+    X_df_var   = X_df.loc[:, var_mask]
+
+    max_predictors = min(5, X_df_var.shape[1])
+    if X_df_var.shape[1] > max_predictors:
+        top_var_aspects = (
+            X_df_var.std()
+            .nlargest(max_predictors)
+            .index.tolist()
+        )
+        X_df_var = X_df_var[top_var_aspects]
+
+    scaler   = StandardScaler()
+    X_sc_var = scaler.fit_transform(X_df_var)
+
+    lm = LinearRegression()
+    lm.fit(X_sc_var, y)
+
+    coef_df = pd.DataFrame({
+        'Aspect':      X_df_var.columns.tolist(),
+        'Coefficient': lm.coef_.round(4),
+    }).sort_values('Coefficient', ascending=False).reset_index(drop=True)
+
+    r2 = lm.score(X_sc_var, y)
+
+    col1, col2 = st.columns([3, 2])
+
+    with col1:
+        st.markdown("#### Standardised Coefficients — Aspect Influence on Negative Evaluations")
+        st.caption(
+            "Coefficients are standardised (mean = 0, SD = 1) so aspects are directly "
+            "comparable regardless of their base rate. A positive coefficient means "
+            "higher negative sentiment for that aspect predicts more negative overall "
+            "evaluations. A negative coefficient means it has a dampening or protective effect."
+        )
+        st.caption(
+            f"Showing top {max_predictors} aspects by cross-group variance. "
+            f"With {len(groups_rq2)} group(s), R² should be interpreted with caution — "
+            "a small number of groups relative to predictors can inflate R². "
+            "Focus on the direction and relative size of coefficients rather than R² alone."
+        )
+
+        COLOR_POS = '#F44336'
+        COLOR_NEG = '#4CAF50'
+        bar_colors = [COLOR_POS if c > 0 else COLOR_NEG for c in coef_df['Coefficient']]
+
+        fig_coef = go.Figure(go.Bar(
+            x=coef_df['Coefficient'],
+            y=coef_df['Aspect'],
+            orientation='h',
+            marker_color=bar_colors,
+            text=coef_df['Coefficient'].apply(lambda x: f"{x:+.3f}"),
+            textposition='outside',
+        ))
+        fig_coef.update_layout(
+            height=max(350, len(coef_df) * 38),
+            margin=dict(l=20, r=60, t=30, b=30),
+            xaxis=dict(title='Standardised Coefficient', zeroline=True, zerolinewidth=2),
+            yaxis=dict(autorange='reversed'),
+            plot_bgcolor='white',
+        )
+        st.plotly_chart(fig_coef, use_container_width=True)
+
+    coef_range = coef_df['Coefficient'].abs().max()
+    near_zero  = coef_range < 0.01
+
+    with col2:
+        st.markdown("#### Model Fit")
+        if len(groups_rq2) == 2:
+            st.warning(
+                "R² is not meaningful here — with only 2 groups a linear "
+                "model always fits perfectly regardless of the data. "
+                "Add more groups for a reliable R²."
+            )
+        else:
+            st.metric("R² (variance explained)", f"{r2:.3f}")
+            st.caption(
+                f"R² = {r2:.3f} means the aspect negative rates explain "
+                f"{r2*100:.1f}% of the variation in overall negative evaluation "
+                "rates across groups. Higher is better — above 0.5 indicates "
+                "aspects are strong predictors of overall sentiment."
+            )
+
+        if near_zero:
+            st.warning(
+                "All coefficients are near zero (< 0.01). This means the selected "
+                "groups have very similar aspect negative rates — the model cannot "
+                "identify a meaningful predictor. The direction (positive vs negative "
+                "coefficient) may still indicate tendency, but should not be "
+                "interpreted as a strong finding. Try groups with more contrasting "
+                "sentiment profiles."
+            )
+
+        st.divider()
+        st.markdown("#### Top Predictors")
+        top_pos = coef_df[coef_df['Coefficient'] > 0].head(3)
+        top_neg_coef = coef_df[coef_df['Coefficient'] < 0].tail(3)
+
+        if len(top_pos) > 0:
+            st.markdown("**Most predictive of negative evaluations:**")
+            for _, row in top_pos.iterrows():
+                st.write(f"- {row['Aspect']} (β = {row['Coefficient']:+.3f})")
+
+        if len(top_neg_coef) > 0:
+            st.markdown("**Protective / dampening aspects:**")
+            for _, row in top_neg_coef.iterrows():
+                st.write(f"- {row['Aspect']} (β = {row['Coefficient']:+.3f})")
+
+    st.divider()
+
+    st.markdown("#### Aspect Negative Rate by Group (Model Input)")
+    st.caption(
+        "Each cell shows the proportion of mentions for that aspect "
+        "that were negative in that group. The rightmost column shows the group's "
+        "overall negative review rate — the outcome the model is predicting. "
+        "Compare across rows to see which aspect patterns coincide with high overall negativity."
+    )
+    display_X = (X_df * 100).round(1)
+    display_X['⚠ Overall Negative %'] = (y * 100).round(1)
+    display_X.index.name = grp_rq2
+    styled_X = display_X.style.background_gradient(
+        cmap='RdYlGn_r', vmin=0, vmax=100, axis=None
+    ).format('{:.1f}%')
+    st.dataframe(styled_X, use_container_width=True)
+
+    st.divider()
+
+    st.markdown("#### What Do Students Complain About Most?")
+    st.caption(
+        "This chart shows the average negative mention rate per aspect across all groups, "
+        "independent of the regression model. It directly answers: which topics do students "
+        "raise as concerns most often? Sorted highest to lowest."
+    )
+    mean_neg = (X_df.mean() * 100).round(1).sort_values(ascending=False).reset_index()
+    mean_neg.columns = ['Aspect', 'Mean Negative %']
+
+    fig_raw = go.Figure(go.Bar(
+        x=mean_neg['Mean Negative %'],
+        y=mean_neg['Aspect'],
+        orientation='h',
+        marker_color='#F44336',
+        text=mean_neg['Mean Negative %'].apply(lambda x: f"{x:.1f}%"),
+        textposition='outside',
+    ))
+    fig_raw.update_layout(
+        height=max(300, len(mean_neg) * 38),
+        margin=dict(l=20, r=60, t=20, b=30),
+        xaxis=dict(title='Mean Negative Mention Rate (%)', range=[0, 105]),
+        yaxis=dict(autorange='reversed'),
+        plot_bgcolor='white',
+    )
+    st.plotly_chart(fig_raw, use_container_width=True)
+
+    st.divider()
+
+    st.markdown("#### Interpretation")
+
+    top1 = coef_df.iloc[0]
+    top2 = coef_df.iloc[1] if len(coef_df) > 1 else None
+
+    if near_zero:
+        interp = (
+            f"The selected groups have very similar aspect negative rates, "
+            f"so no aspect emerges as a clear predictor. "
+            f"Directionally, {top1['Aspect']} shows the largest positive tendency "
+            f"(β = {top1['Coefficient']:+.3f}), suggesting it may lean toward "
+            f"predicting negative evaluations, but the difference is too small to "
+            f"be meaningful. Consider running this analysis with groups that have "
+            f"more contrasting sentiment profiles."
+        )
+    else:
+        r2_str = "" if len(groups_rq2) == 2 else (
+            f"OLS linear regression explains {r2*100:.1f}% of the variation "
+            f"in negative evaluation rates across groups (R² = {r2:.3f}). "
+        )
+        interp = (
+            f"{r2_str}"
+            f"The aspect most predictive of negative overall evaluations is "
+            f"{top1['Aspect']} (β = {top1['Coefficient']:+.3f}), meaning groups "
+            f"where students rate {top1['Aspect']} negatively tend to have higher "
+            f"overall negative evaluation rates. "
+        )
+        if top2 is not None:
+            interp += (
+                f"{top2['Aspect']} is the second strongest predictor "
+                f"(β = {top2['Coefficient']:+.3f}). "
+            )
+        prot = coef_df[coef_df['Coefficient'] < 0]
+        if len(prot) > 0:
+            prot1 = prot.iloc[-1]
+            interp += (
+                f"Conversely, {prot1['Aspect']} shows a negative coefficient "
+                f"(β = {prot1['Coefficient']:+.3f}), suggesting it may have a "
+                f"protective effect — groups where students feel positively about "
+                f"{prot1['Aspect']} tend to report fewer negative evaluations overall."
+            )
+
+    st.write(interp)
+    st.caption(
+        "Note: With group-level data the sample size is small (one row per group). "
+        "Coefficients indicate direction and relative importance but should be "
+        "interpreted with caution. This analysis is exploratory and descriptive."
+    )
