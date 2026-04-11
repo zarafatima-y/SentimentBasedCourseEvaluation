@@ -7,31 +7,20 @@ from sklearn.preprocessing import StandardScaler
 
 
 def render_rq2_tab(config):
-    st.markdown("### 📉 RQ2: Which Aspects Most Predict Negative Course Evaluations?")
+    st.markdown("### 📉 RQ2: Which Aspects Are Most Associated With Negative Evaluations?")
 
     st.markdown(
-        "**Research Question:** Which aspects are associated with negative course evaluations? "
-        "This tab answers the question at **three levels** — global (all uploaded data), "
-        "comparative (regression across the groups you selected), and per-group (one paragraph "
-        "per selected group). These three views can legitimately disagree, and the disagreements "
-        "are informative."
+    "**Research Question:** Which course aspects are most strongly associated with "
+    "negative overall evaluations, and does that association hold across three lenses — "
+    "global, comparative, and per-group?"
     )
 
     st.caption(
-        "Since reviews are anonymous, we cannot link individual comments to individual overall "
-        "ratings. The comparative view works at the group level — each group is one section, "
-        "year, or course — and uses OLS linear regression to estimate which aspect negative rates "
-        "track most closely with overall negativity across groups. "
-        "Following Pang, Lee & Vaithyanathan (2002) and Schouten & Frasincar (2016), aspect-level "
-        "sentiment features carry predictive signal about overall evaluation outcomes beyond what "
-        "whole-text sentiment alone captures."
-    )
-
-    st.caption(
-        "References: Pang, B., Lee, L., & Vaithyanathan, S. (2002). Thumbs up? Sentiment "
-        "classification using machine learning techniques. EMNLP. "
-        "Schouten, K., & Frasincar, F. (2016). Survey on aspect-level sentiment analysis. "
-        "IEEE Transactions on Knowledge and Data Engineering, 28(3), 813-830."
+    "Reviews are anonymous, so aspect mentions cannot be linked to individual overall "
+    "ratings. The comparative view therefore works at the group level (section, year, "
+    "or course) using OLS regression. Following Pang, Lee & Vaithyanathan (2002) and "
+    "Schouten & Frasincar (2016), aspect-level sentiment carries predictive signal "
+    "beyond whole-text sentiment alone."
     )
 
     st.divider()
