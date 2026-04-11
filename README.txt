@@ -1,4 +1,4 @@
-# Sentiment Based Course Evaluation Analysis System
+**Sentiment Based Course Evaluation Analysis System**
 
 A Streamlit web application that analyses student course evaluation PDFs using NLP, sentiment analysis, emotion detection, aspect-level analysis, and LLM-generated faculty improvement reports.
 
