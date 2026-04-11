@@ -1,4 +1,4 @@
-# Sentiment Based Course Evaluation Analysis System
+## Sentiment Based Course Evaluation Analysis System
 
 A Streamlit web application that analyses student course evaluation PDFs using NLP, sentiment analysis, emotion detection, aspect-level analysis, and LLM-generated faculty improvement reports.
 
@@ -13,9 +13,9 @@ Upload one or more course evaluation PDFs and the application will:
 - Extract and clean student written reviews automatically
 - Run whole-text sentiment analysis (Positive / Neutral / Negative)
 - Detect the dominant emotion per review (joy, sadness, anger, fear, surprise, neutral)
-- Break down sentiment by course aspect (instructor quality, workload, assessments, course content, difficulty, resources, and more) using a custom-built ABSA pipeline — no pre-trained aspect model is used. Reviews are split into individual sentences, a keyword dictionary maps each sentence to one of ten course aspects, and the same RoBERTa sentiment model used for whole-text analysis evaluates each sentence independently
+- Break down sentiment by course aspect using a custom-built ABSA pipeline (no pre-trained aspect model). Reviews are split into sentences, a keyword dictionary maps each sentence to one of ten course aspects, and the same RoBERTa sentiment model used for whole-text analysis evaluates each sentence independently
 - Compare results across sections, years, or different courses
-- Identify which aspects most predict negative overall evaluations (RQ2)
+- Identify which aspects are most associated with negative evaluations across global, comparative, and per-group views (RQ2)
 - Generate a plain-English faculty improvement report using an LLM
 - Export all results as CSV files or a comprehensive PDF report
 
@@ -23,176 +23,148 @@ Upload one or more course evaluation PDFs and the application will:
 
 ## Accessing the App
 
-**Web (no setup required)**
-Visit [sentimentbasedcourseevaluation.streamlit.app](https://sentimentbasedcourseevaluation.streamlit.app/) in any browser. No account or installation needed.
+**Web (no setup required):** Visit [sentimentbasedcourseevaluation.streamlit.app](https://sentimentbasedcourseevaluation.streamlit.app/) in any browser.
 
-**Local development**
-See the [Local Setup](#setup--local-development) section below.
+**Local development:** See the [Local Setup](#setup--local-development) section below.
 
 ---
 
 ## How to Use the App
 
-The app walks you through four stages shown in the left sidebar: Upload, Clean, Analyze, and Results. Each stage must be completed before moving to the next.
+The app walks you through four stages in the sidebar: Upload, Clean, Analyze, and Results.
 
-**Stage 1 — Upload**
-Upload one or more course evaluation PDFs using the file uploader. The app expects PDFs containing an `ESSAY RESULTS` section with free-text student responses. It automatically extracts the course code, academic year, and section from the PDF header. Multiple PDFs can be uploaded at once.
+**Stage 1 — Upload.** Upload one or more course evaluation PDFs. The app expects PDFs containing an `ESSAY RESULTS` section with free-text student responses, and extracts the course code, academic year, and section automatically from the PDF header.
 
-**Stage 2 — Clean**
-Review the extracted data and select cleaning options (remove nulls, remove very short reviews, normalize text). Click Run Preprocessing to confirm. The number of reviews remaining after cleaning is shown.
+**Stage 2 — Clean.** Review the extracted data, select cleaning options (remove nulls, remove very short reviews, normalize text), and click Run Preprocessing.
 
-**Stage 3 — Analyze**
-Select your analysis type, the courses or sections you want to include, which analysis modules to run (sentiment, aspect, emotion), and whether to show heatmaps and radar charts. Click Run Selected Analysis to proceed.
+**Stage 3 — Analyze.** Select your analysis type, the courses or sections you want to include, and which analysis modules to run (sentiment, aspect, emotion). Click Run Selected Analysis.
 
-**Stage 4 — Results**
-Results are displayed in a tabbed dashboard. Each tab is described in detail below.
+**Stage 4 — Results.** Results are displayed in a tabbed dashboard described below.
 
 ---
 
 ## Analysis Types
 
-**Single Course Analysis**
-Analyzes one course in one year. All sections are pooled together. Best used when you want an overall picture of how a course performed in a specific year.
-- Select: 1 course, 1 year
-- Sections available: all sections pooled automatically
-
-**Compare Sections (Same Course, Same Year)**
-Side-by-side comparison of multiple sections of the same course in the same year. Useful for identifying differences between instructors or section delivery.
-- Select: 1 course, 1 year, 2 to 5 sections
-- Minimum: 2 sections | Maximum: 5 sections
-
-**Compare Years (Same Course)**
-Tracks how student sentiment and aspect feedback have changed over time for the same course. Sections within each year are pooled.
-- Select: 1 course, 2 to 5 years
-- Minimum: 2 years | Maximum: 5 years
-
-**Cross-Course Comparison**
-Compares multiple different courses against each other. Each course is identified by its code and year. Useful for department-level analysis.
-- Select: 2 to 5 course–year combinations
-- Minimum: 2 combinations | Maximum: 5 combinations
+- **Single Course Analysis** — one course in one year, all sections pooled.
+- **Compare Sections** — 2 to 5 sections of the same course in the same year.
+- **Compare Years** — same course across 2 to 5 years.
+- **Cross-Course Comparison** — 2 to 5 different course–year combinations.
 
 ---
 
 ## Results Dashboard — Tab by Tab
 
 ### Overview
-Shows the total number of reviews, courses, years, and sections loaded. Displays a review count breakdown by group (section, year, or course depending on analysis type). For Compare Years, also shows overall sentiment trend lines and per-aspect negative sentiment trends over time.
+Total reviews, courses, years, and sections loaded, plus a review count breakdown by group. For Compare Years, also shows overall sentiment trend lines and per-aspect negative sentiment trends over time.
 
 ### Sentiment
-Shows how student reviews break down into Positive, Neutral, and Negative categories.
-
-- **Individual pie charts** — one per group (section, year, or course) showing that group's sentiment split independently. Compare proportions across groups to spot differences.
-- **Grouped bar chart** — all groups side by side showing raw counts. Use this alongside the pies to see both absolute volume and proportion.
-- **Trend line** (Compare Years only) — shows how each sentiment category has changed as a percentage over the selected years. A rising Negative line indicates worsening student experience.
-- **Aspect Sentiment Balance** — for each course aspect, shows the percentage of mentions that were positive (green) and negative (red). Green and red do not always add up to 100% because neutral mentions fill the gap. Aspects are sorted from most negative to least so priority concerns appear first. One chart per group.
+- **Individual pie charts** — one per group showing that group's sentiment split.
+- **Grouped bar chart** — all groups side by side with raw counts.
+- **Trend line** (Compare Years only) — how each sentiment category changed over time.
+- **Aspect Sentiment Balance** — per-aspect positive vs negative mention percentages, sorted from most negative to least so priority concerns appear first.
 
 ### Aspects
-Shows which course dimensions students discussed and how they felt about them.
-
-- **Aspect Frequency bar chart** — raw count of how many times each aspect was mentioned. Note this is not normalised — groups with more students will naturally have higher bars. Use the radar charts for a proportional comparison.
-- **Aspect–Sentiment Heatmap** — each row is a group–aspect pair. Columns show how many mentions were Negative, Neutral, or Positive. Cross-reference with the frequency bar chart: a high count that lands mostly in the Negative column is a strong concern signal.
-- **Radar charts** — three side-by-side charts showing Aspect Counts, Positive %, and Negative % for all groups on the same axes. Use Positive % and Negative % for fair cross-group comparison since they normalise for review volume. A large area on the Negative % radar for an aspect means students across groups consistently find it problematic.
-- **Survey Question Breakdown table** — sentiment and top aspects grouped by the question students were answering. Colour-coded by dominant sentiment (green = positive, red = negative, yellow = neutral).
+- **Aspect Frequency bar chart** — raw count of mentions per aspect (not normalised).
+- **Aspect–Sentiment Heatmap** — group–aspect pairs with Negative / Neutral / Positive counts.
+- **Radar charts** — Aspect Counts, Positive %, and Negative % side by side for fair cross-group comparison.
+- **Survey Question Breakdown table** — sentiment and top aspects grouped by the question students were answering.
 
 ### Emotions
-Shows the emotional tone of reviews beyond positive and negative polarity.
+- **Emotion distribution chart** — frequency of joy, anger, sadness, fear, surprise, neutral.
+- **Emotion × Sentiment heatmap** — how emotions co-occur with sentiment labels.
+- **Per-group heatmaps** — one per group, side by side.
 
-- **Emotion distribution chart** — how often each emotion (joy, anger, sadness, fear, surprise, neutral) appeared across reviews. Joy should dominate in well-received courses; high anger or sadness signals deeper dissatisfaction.
-- **Emotion × Sentiment heatmap** — shows how emotions co-occur with sentiment labels. Joy clustering with Positive is expected. Anger or fear appearing in Neutral reviews is a subtler signal worth noting — students may be suppressing negative sentiment in their overall rating but expressing it emotionally.
-- **Per-group heatmaps** — one heatmap per group shown side by side so you can compare emotional profiles directly.
+### RQ2: Aspect Associations
 
-### RQ2: Aspect Predictors
+**Which course aspects are most strongly associated with negative overall evaluations?** This tab answers the question at three levels — global, comparative, and per-group — that can legitimately disagree, and the disagreements are themselves informative.
 
-Answers the question: which aspects are associated with negative course evaluations? This tab deliberately shows **three different layers** of the same question, because each answers something different and they can legitimately disagree:
+#### How each layer works
 
-- **Global answer (all uploaded data)** — "Across every review uploaded, aspect X appears in Y% of negative reviews." Useful for department-wide priorities. Independent of the groups the user selected in Stage 3.
-- **Comparative answer (regression on selected groups)** — "Among the groups you picked, aspect Z is what separates the worse groups from the better ones." Useful for a dean comparing courses. This is what the OLS coefficient chart shows.
-- **Per-group answer (one paragraph per selected group)** — "In this specific group, the worst aspect is W." Useful for an individual instructor reading their own report.
+The three layers are not the same formula applied to different slices. They use **different methods entirely**:
 
-These three answers can all disagree and none is wrong. For example, the regression might flag workload as the top cross-group predictor because workload negativity tracks overall negativity across groups — even if instructor is the highest-negativity aspect in every individual group. When the layers agree, that's a strong signal. When they disagree, the disagreement itself is informative: an aspect that is high everywhere (per-group) but flat in the regression is a universal concern; an aspect that is flat per-group but strong in the regression is what makes one course worse than another on top of the shared baseline.
+- **Global = simple counting. No regression.** Just: *"of all the negative reviews uploaded, what % mention each aspect?"* This uses every PDF you uploaded in Stage 1, regardless of what you selected in Stage 3.
+- **Comparative = OLS regression.** One row per group, predicts overall negativity from per-aspect negativity. This uses only the groups selected in Stage 3.
+- **Per-group = simple ranking within each group. No regression.** Just: *"for this group, which aspect has the highest negative mention rate?"*
 
-**Tab contents:**
+Global and Per-group are descriptive (counts and rankings). Only Comparative uses the regression. That is why they can disagree on the same data — they are asking structurally different questions.
 
-- **Coefficient chart** — horizontal bar chart showing standardised OLS regression coefficients across the selected groups. Red bars (positive coefficients) indicate aspects whose negative rate rises together with overall negativity across groups. Green bars (negative coefficients) do not drive overall negativity in this comparison. Focus on direction and relative bar length rather than exact values, especially with small group counts.
-- **Model Fit (R²)** — shown as a caption below the chart. Above 0.5 indicates aspects are strong predictors. With only 2 groups R² = 1.0 by construction — add more groups for a reliable R².
-- **Group-Specific Findings** — one plain-English paragraph per selected group naming the most negatively rated aspect, the overall negative rate, and the most positively received aspect for that specific group. This is the per-group layer.
-- **Model Input table** — shows the raw negative mention rate per aspect per group, with the overall negative review rate in the rightmost column. Lets you see directly which aspect rates are high in groups that also have high overall negativity.
+#### What OLS regression actually does
+
+> **OLS draws a straight-line relationship between how negative each aspect is and how negative the overall reviews are, across the groups you selected. The coefficients tell you which aspect's pattern matches the overall pattern most closely. The aspect with the biggest positive coefficient is the one whose ups and downs explain the ups and downs in overall negativity best.**
+
+For each group, the regression takes the overall negative review rate as the **outcome** and the per-aspect negative mention rates as the **predictors**. The coefficients (the β values) are the weights that best line up the predictors with the outcome across rows. A large positive coefficient means that aspect's variation tracks overall negativity closely. A coefficient near zero means the aspect is either flat across groups or its variation does not line up with the outcome.
+
+A worked example: if you compare three courses where instructor negativity is 80% in all three but workload climbs 30% → 60% → 90% as overall negativity climbs 20% → 50% → 80%, OLS will give workload a large positive coefficient (it tracks overall negativity perfectly) and instructor a coefficient near zero (it does not move, so it cannot explain why one course is worse than another). That does not mean instructor is unimportant — it means instructor is a shared baseline concern, while workload is what differentiates the groups. The Global and Per-group views would still flag instructor as the top concern in absolute terms. This is exactly the kind of disagreement the three layers are designed to surface.
+
+#### When the layers agree vs disagree
+
+- **All three agree** → strong, convergent signal. Prioritise that aspect for intervention.
+- **Global and Per-group agree but Comparative disagrees** → the agreed aspect is a shared baseline concern across all uploaded data; the comparative aspect is the specific driver of variation among the groups you selected.
+- **Comparative is near-zero across the board** → the selected groups have very similar profiles. Trust the Global and Per-group views for this selection.
+
+#### Tab contents
+
+- **Global bar chart** — aspects ranked by share of negative reviews they appear in, across all uploaded data.
+- **Coefficient chart** — standardised OLS coefficients across selected groups. Red bars differentiate more-negative groups; green bars do not.
+- **Agreement callout** — flags whether the global and comparative views pick the same top aspect, and explains any disagreement in plain language.
+- **Per-group paragraphs** — one sentence per group naming its biggest concern and most positively received aspect.
+- **Key Finding** — synthesis block at the bottom combining all three layers into a single takeaway.
+
+#### Methodological note
+
+Because the course evaluation PDFs contain anonymous reviews, individual aspect mentions cannot be linked to individual overall ratings. The regression is therefore necessarily specified at the group level, with one observation per section, year, or course. This limits statistical power — the analysis is exploratory and descriptive rather than inferential. Coefficients indicate direction and relative importance, not statistical significance. This is a constraint imposed by the data structure, not a methodological choice.
 
 ### LLM Summary
-Generates a plain-English faculty improvement report using Meta Llama 3 8B Instruct via the HuggingFace Inference API. Click Generate LLM Summary to run. Generation typically takes under 30 seconds. The report is addressed directly to the course instructor, acknowledges what students appreciate, identifies the top three areas of concern with specific recommendations, flags any aspects confirmed as problems by both essay and numeric data (Double Signal), and closes with an encouraging note. One paragraph is generated per group.
-
-Note: LLM generation requires a valid HuggingFace token with access to Meta-Llama-3-8B-Instruct.
+Generates a plain-English faculty improvement report using Meta Llama 3 8B Instruct via the HuggingFace Inference API. The report acknowledges what students appreciate, identifies the top three areas of concern with specific recommendations, flags any aspects confirmed as problems by both essay and numeric data (Double Signal), and closes with an encouraging note. One paragraph is generated per group. Requires a valid HuggingFace token.
 
 ### Numeric Insights
-Displays results from the multiple-choice Likert-scale section of the evaluation PDF (1–7 scale). Only the top response categories covering approximately 75% of responses are shown per question — less common responses are excluded to keep charts readable. This is why bars may not sum to 100%.
+Displays results from the multiple-choice Likert-scale section of the evaluation PDF (1–7 scale). Only the top response categories covering approximately 75% of responses are shown per question, so bars may not sum to 100%.
 
 - **Mean Scores table** — colour-coded from red (low) to green (high). Scores below 5.0/7 indicate potential concern areas.
-- **Response Distribution charts** — stacked bars showing the percentage of students selecting each rating per question, broken down by group.
-- **Mean Score Trend** (Compare Years only) — line chart showing how each question's mean score has changed over the selected years. Rising lines indicate improvement.
+- **Response Distribution charts** — stacked bars per question, broken down by group.
+- **Mean Score Trend** (Compare Years only) — line chart showing how each question's mean score has changed over the selected years.
 
 ### Download
-Export all analysis results.
 
-**CSV exports**
-- Full Analysis — all reviews with sentiment, emotion, and metadata
-- Aspect Analysis — all aspect-level sentiment labels
-- Long Format — merged review and aspect data
-- Numeric Ratings — raw Likert-scale data
+**CSV exports:** Full Analysis, Aspect Analysis, Long Format, Numeric Ratings.
 
-**Comprehensive PDF Report**
-Generates a structured PDF containing all chart images, explanatory text, sentiment and aspect analysis, emotion analysis, numeric survey results, RQ2 findings including group-specific paragraphs, and the LLM improvement report if it was generated during the session. Click Generate PDF Report to build it. Chart generation may take 15–30 seconds. The LLM section is only included if you clicked Generate LLM Summary in the LLM tab before downloading.
+**Comprehensive PDF Report:** generates a structured PDF with all chart images, explanatory text, sentiment and aspect analysis, emotion analysis, numeric survey results, RQ2 findings including group-specific paragraphs, and the LLM improvement report if generated. The LLM section is only included if Generate LLM Summary was clicked before downloading.
 
 ---
 
 ## Setup — Local Development
 
-**1. Clone the repository**
 ```bash
 git clone https://github.com/zarafatima-y/SentimentBasedCourseEvaluation.git
 cd SentimentBasedCourseEvaluation
-```
-
-**2. Create and activate a virtual environment**
-```bash
 python3 -m venv venv
 source venv/bin/activate          # macOS / Linux
 venv\Scripts\activate             # Windows
-```
-
-**3. Install dependencies**
-```bash
 pip install -r requirements.txt
 ```
 
-**4. Set your HuggingFace token**
-
-Copy `.env.example` to `.env` and fill in your token:
-```bash
-cp .env.example .env
-```
-Open `.env` and replace the placeholder:
+Copy `.env.example` to `.env` and set your HuggingFace token:
 ```
 HUGGINGFACE_TOKEN=hf_your_actual_token_here
 ```
-You need a HuggingFace account and must accept the licence terms for Meta-Llama-3-8B-Instruct at [huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) before the LLM tab will work. The sentiment, emotion, and aspect tabs do not require a token.
+You need a HuggingFace account and must accept the licence terms for Meta-Llama-3-8B-Instruct at [huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct](https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct) for the LLM tab to work. The sentiment, emotion, and aspect tabs do not require a token.
 
-**5. Run the application**
+Run the app:
 ```bash
 streamlit run app.py
 ```
-The app will open in your browser at `http://localhost:8501`
 
 ---
 
 ## Streamlit Cloud Deployment
 
-1. Push the repository to GitHub — do not commit your `.env` file
-2. Go to [share.streamlit.io](https://share.streamlit.io) and connect your GitHub repository
-3. Add your HuggingFace token as a secret under Settings → Secrets:
-```toml
-HUGGINGFACE_TOKEN = "hf_your_actual_token_here"
-```
-4. Deploy — the app loads the token automatically from Streamlit Secrets
+1. Push the repository to GitHub — do not commit your `.env` file.
+2. Connect your GitHub repository at [share.streamlit.io](https://share.streamlit.io).
+3. Add your HuggingFace token under Settings → Secrets:
+   ```toml
+   HUGGINGFACE_TOKEN = "hf_your_actual_token_here"
+   ```
+4. Deploy.
 
 ---
 
@@ -205,21 +177,20 @@ HUGGINGFACE_TOKEN = "hf_your_actual_token_here"
 | ML | scikit-learn 1.3+ | OLS regression (RQ2) |
 | PDF | pdfplumber, PyPDF2 | Text extraction |
 | NLP | Transformers, PyTorch, NLTK | Model loading, tokenisation |
-| Sentiment Model | cardiffnlp/twitter-roberta-base-sentiment-latest | Whole-text sentiment and aspect-level sentence sentiment |
-| Aspect Pipeline | Custom-built (keyword detection + sentence splitting) | No pre-trained ABSA model — pipeline designed and implemented from scratch |
+| Sentiment Model | cardiffnlp/twitter-roberta-base-sentiment-latest | Whole-text and aspect-level sentiment |
+| Aspect Pipeline | Custom-built (keyword detection + sentence splitting) | No pre-trained ABSA model |
 | Emotion Model | j-hartmann/emotion-english-distilroberta-base | 7-class emotion detection |
 | LLM | meta-llama/Meta-Llama-3-8B-Instruct (HF API) | Faculty report generation |
 | Visualisation | Plotly, Matplotlib, Seaborn | Interactive and static charts |
 | PDF Export | ReportLab, kaleido | Comprehensive report generation |
-| Utilities | python-dotenv, requests, tqdm | Token loading, API calls |
 
 ---
 
 ## Notes
 
-- Sentiment and emotion models are downloaded from HuggingFace on first run and cached locally. Initial startup may take a few minutes.
-- The LLM summary runs via the HuggingFace cloud API. It does not run locally and requires a valid token with access to the gated Llama 3 model.
-- RQ2 regression requires at least 2 groups. With only 2 groups R² = 1.0 by construction — add more groups for meaningful coefficients.
+- Sentiment and emotion models are downloaded from HuggingFace on first run and cached locally.
+- The LLM summary runs via the HuggingFace cloud API and requires a valid token with access to the gated Llama 3 model.
+- RQ2's comparative (regression) layer requires at least 2 groups. The global layer works with any amount of data. With only 2 groups R² = 1.0 by construction.
 - If your PDFs use a different format than expected, parsing logic can be adjusted in `data/loader.py`.
 
 ---
