@@ -13,7 +13,7 @@ Upload one or more course evaluation PDFs and the application will:
 - Extract and clean student written reviews automatically
 - Run whole-text sentiment analysis (Positive / Neutral / Negative)
 - Detect the dominant emotion per review (joy, sadness, anger, fear, surprise, neutral)
-- Break down sentiment by course aspect (instructor quality, workload, assessments, course content, difficulty, resources, and more)
+- Break down sentiment by course aspect (instructor quality, workload, assessments, course content, difficulty, resources, and more) using a custom-built ABSA pipeline — no pre-trained aspect model is used. Reviews are split into individual sentences, a keyword dictionary maps each sentence to one of ten course aspects, and the same RoBERTa sentiment model used for whole-text analysis evaluates each sentence independently
 - Compare results across sections, years, or different courses
 - Identify which aspects most predict negative overall evaluations (RQ2)
 - Generate a plain-English faculty improvement report using an LLM
@@ -197,7 +197,8 @@ HUGGINGFACE_TOKEN = "hf_your_actual_token_here"
 | ML | scikit-learn 1.3+ | OLS regression (RQ2) |
 | PDF | pdfplumber, PyPDF2 | Text extraction |
 | NLP | Transformers, PyTorch, NLTK | Model loading, tokenisation |
-| Sentiment Model | cardiffnlp/twitter-roberta-base-sentiment-latest | Whole-text sentiment |
+| Sentiment Model | cardiffnlp/twitter-roberta-base-sentiment-latest | Whole-text sentiment and aspect-level sentence sentiment |
+| Aspect Pipeline | Custom-built (keyword detection + sentence splitting) | No pre-trained ABSA model — pipeline designed and implemented from scratch |
 | Emotion Model | j-hartmann/emotion-english-distilroberta-base | 7-class emotion detection |
 | LLM | meta-llama/Meta-Llama-3-8B-Instruct (HF API) | Faculty report generation |
 | Visualisation | Plotly, Matplotlib, Seaborn | Interactive and static charts |
@@ -224,4 +225,4 @@ HUGGINGFACE_TOKEN = "hf_your_actual_token_here"
 
 ---
 
-*EECS 4080 Capstone Project — York University, Lassonde School of Engineering*
+*EECS 4080 Computer Science Project — York University, Lassonde School of Engineering*
