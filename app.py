@@ -267,9 +267,6 @@ elif st.session_state.stage == 'preprocess':
 
                 st.session_state.processing_time['cleaning'] = time.time() - start_time
                 st.success(f"‼️ Cleaning complete — {len(st.session_state.df)} reviews remaining")
-                # keepthe full cleaned dataset so RQ2's Global layer has a stable source
-                # that does not change when the user changes analysis type in Stage 3.
-                st.session_state.df_full = st.session_state.df.copy()
                 st.session_state.stage = 'analyze'
                 st.rerun()
     else:
@@ -613,7 +610,8 @@ elif st.session_state.stage == 'analyze':
                         adf['review_clean'] = keys
 
                     st.session_state.aspect_df = adf
-                    st.session_state.aspect_df_full = st.session_state.aspect_df.copy()
+                    if 'aspect_df_full' not in st.session_state:
+                        st.session_state.aspect_df_full = st.session_state.aspect_df.copy()
                 else:
                     st.warning("⚠️ No aspects were detected in the reviews.")
                     st.session_state.aspect_df = pd.DataFrame(
@@ -637,6 +635,10 @@ elif st.session_state.stage == 'analyze':
                 progress_bar.progress(0.75)
 
             st.session_state.df = filtered_df
+            # Snapshot on the first run so RQ2's Global layer has a stable baseline
+            # (df has sentiment at this point; Stage 2 does not).
+            if 'df_full' not in st.session_state:
+                st.session_state.df_full = st.session_state.df.copy()
 
             if run_aspect and st.session_state.aspect_df is not None and len(st.session_state.aspect_df) > 0:
                 status_text.text("🔄 Creating analysis datasets...")
