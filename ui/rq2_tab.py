@@ -28,6 +28,11 @@ def render_rq2_tab(config):
     adf_rq2  = st.session_state.aspect_df
     main_rq2 = st.session_state.df
 
+    # Global layer reads from the full cleaned snapshot, not the filtered analysis subset.
+    # Comparative and Per-group layers continue to use adf_rq2/main_rq2 (Stage 3 filtered).
+    adf_global  = st.session_state.get('aspect_df_full', adf_rq2)
+    main_global = st.session_state.get('df_full',        main_rq2)
+
     if adf_rq2 is None or len(adf_rq2) == 0:
         st.warning("No aspect data available. Please run aspect analysis first.")
         return
@@ -43,7 +48,7 @@ def render_rq2_tab(config):
 
     st.markdown("## 🌐 Global — Across All Uploaded Data")
 
-    neg_reviews_global = main_rq2[main_rq2['sentiment'] == 'Negative']
+    neg_reviews_global = main_global[main_global['sentiment'] == 'Negative']
     total_neg_reviews  = len(neg_reviews_global)
     top_global_aspect  = None
     global_df          = None
@@ -51,14 +56,14 @@ def render_rq2_tab(config):
     if total_neg_reviews == 0:
         st.info("No negative reviews found in the uploaded data — skipping global view.")
     else:
-        if 'review' in adf_rq2.columns and 'review' in main_rq2.columns:
+        if 'review' in adf_global.columns and 'review' in main_global.columns:
             neg_review_texts = set(neg_reviews_global['review'].tolist())
-            adf_in_neg       = adf_rq2[adf_rq2['review'].isin(neg_review_texts)]
+            adf_in_neg       = adf_global[adf_global['review'].isin(neg_review_texts)]
         else:
-            adf_in_neg = adf_rq2[adf_rq2[s_col_rq2] == 'Negative']
+            adf_in_neg = adf_global[adf_global[s_col_rq2] == 'Negative']
 
         global_rows = []
-        all_aspects_global = sorted(adf_rq2['aspect'].dropna().unique().tolist())
+        all_aspects_global = sorted(adf_global['aspect'].dropna().unique().tolist())
 
         for asp in all_aspects_global:
             reviews_with_asp = (
