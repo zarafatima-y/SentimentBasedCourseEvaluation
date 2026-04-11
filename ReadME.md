@@ -102,13 +102,21 @@ Shows the emotional tone of reviews beyond positive and negative polarity.
 - **Per-group heatmaps** — one heatmap per group shown side by side so you can compare emotional profiles directly.
 
 ### RQ2: Aspect Predictors
-Answers the question: which aspects most strongly predict whether a group's overall evaluation is negative?
 
-- **Coefficient chart** — horizontal bar chart showing standardised OLS regression coefficients. Red bars (positive coefficients) indicate aspects that predict more negative overall evaluations when students rate them negatively. Green bars (negative coefficients) suggest a dampening or protective effect — groups that struggle with this aspect still tend to leave positive overall reviews. Focus on direction and relative bar length rather than exact values, especially with small group counts.
-- **Model Fit (R²)** — shown in the right panel. Above 0.5 indicates aspects are strong predictors. With only 2 groups R² is suppressed because a line through 2 points always fits perfectly — add more groups for a reliable R².
-- **Model Input table** — shows the raw negative mention rate per aspect per group, with the overall negative review rate in the rightmost column. This lets you see the cause-and-effect directly: which aspect rates are high in groups that also have high overall negativity.
-- **What Do Students Complain About Most chart** — average negative mention rate per aspect across all groups, independent of the model. Aspects high here but low in the coefficient chart are widespread concerns that affect everyone equally and therefore don't differentiate groups.
-- **Group-Specific Findings** — one plain-English paragraph per group naming the most negatively rated aspect, the overall negative rate, and the most positively received aspect for that specific group.
+Answers the question: which aspects are associated with negative course evaluations? This tab deliberately shows **three different layers** of the same question, because each answers something different and they can legitimately disagree:
+
+- **Global answer (all uploaded data)** — "Across every review uploaded, aspect X appears in Y% of negative reviews." Useful for department-wide priorities. Independent of the groups the user selected in Stage 3.
+- **Comparative answer (regression on selected groups)** — "Among the groups you picked, aspect Z is what separates the worse groups from the better ones." Useful for a dean comparing courses. This is what the OLS coefficient chart shows.
+- **Per-group answer (one paragraph per selected group)** — "In this specific group, the worst aspect is W." Useful for an individual instructor reading their own report.
+
+These three answers can all disagree and none is wrong. For example, the regression might flag workload as the top cross-group predictor because workload negativity tracks overall negativity across groups — even if instructor is the highest-negativity aspect in every individual group. When the layers agree, that's a strong signal. When they disagree, the disagreement itself is informative: an aspect that is high everywhere (per-group) but flat in the regression is a universal concern; an aspect that is flat per-group but strong in the regression is what makes one course worse than another on top of the shared baseline.
+
+**Tab contents:**
+
+- **Coefficient chart** — horizontal bar chart showing standardised OLS regression coefficients across the selected groups. Red bars (positive coefficients) indicate aspects whose negative rate rises together with overall negativity across groups. Green bars (negative coefficients) do not drive overall negativity in this comparison. Focus on direction and relative bar length rather than exact values, especially with small group counts.
+- **Model Fit (R²)** — shown as a caption below the chart. Above 0.5 indicates aspects are strong predictors. With only 2 groups R² = 1.0 by construction — add more groups for a reliable R².
+- **Group-Specific Findings** — one plain-English paragraph per selected group naming the most negatively rated aspect, the overall negative rate, and the most positively received aspect for that specific group. This is the per-group layer.
+- **Model Input table** — shows the raw negative mention rate per aspect per group, with the overall negative review rate in the rightmost column. Lets you see directly which aspect rates are high in groups that also have high overall negativity.
 
 ### LLM Summary
 Generates a plain-English faculty improvement report using Meta Llama 3 8B Instruct via the HuggingFace Inference API. Click Generate LLM Summary to run. Generation typically takes under 30 seconds. The report is addressed directly to the course instructor, acknowledges what students appreciate, identifies the top three areas of concern with specific recommendations, flags any aspects confirmed as problems by both essay and numeric data (Double Signal), and closes with an encouraging note. One paragraph is generated per group.
