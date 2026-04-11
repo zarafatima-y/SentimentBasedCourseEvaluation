@@ -9,7 +9,6 @@ from typing import List, Optional, Tuple, Dict
 class Visualizer:
     """Handle all visualizations"""
 
-    # Colour palette shared across methods
     _PALETTE = [
         '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
     ]
@@ -21,31 +20,6 @@ class Visualizer:
         title: str,
         y_max: Optional[float] = None,
     ) -> Tuple[plt.Figure, plt.Axes]:
-        """
-        Create a polar radar chart with N coloured traces (one per group).
-
-        Parameters
-        ----------
-        categories : list of spoke labels (aspects)
-        groups     : dict of {group_name: [values]}  — one entry per trace.
-                     All value lists must be the same length as `categories`.
-        title      : chart title
-        y_max      : optional manual radial axis ceiling.
-                     If None, derived from data.
-
-        Returns
-        -------
-        (fig, ax)  — matplotlib Figure and polar Axes.
-                     Returns (None, None) if data is insufficient.
-
-        Backward-compatible helper
-        --------------------------
-        Old call signature was:
-            create_radar_chart(categories, values1, values2,
-                               group1_name, group2_name, title)
-        That still works — the method detects the old positional args
-        and converts them transparently.
-        """
         if not categories or not groups:
             print(f"Cannot create radar chart for '{title}': Missing data")
             return None, None
@@ -85,28 +59,18 @@ class Visualizer:
         plt.legend(loc='upper right', bbox_to_anchor=(1.3, 1.15), fontsize=9)
         plt.tight_layout()
         return fig, ax
-
-    # ------------------------------------------------------------------
-    # Convenience: build the groups dict from an aspect DataFrame
-    # ------------------------------------------------------------------
+    
     @staticmethod
     def radar_from_aspect_df(
         aspect_df: pd.DataFrame,
         group_col: str,
         sentiment_col: str,
         groups: List,
-        mode: str = 'counts',        # 'counts' | 'pos_pct' | 'neg_pct'
+        mode: str = 'counts',      
         top_n: int = 10,
         title: str = '',
     ) -> Tuple[plt.Figure, plt.Axes]:
-        """
-        High-level wrapper that extracts values from aspect_df and calls
-        create_radar_chart.
-
-        mode='counts'  → radial value = number of times aspect was mentioned
-        mode='pos_pct' → radial value = % of mentions that were Positive
-        mode='neg_pct' → radial value = % of mentions that were Negative
-        """
+        
         top_aspects = (
             aspect_df['aspect']
             .value_counts()

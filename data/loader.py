@@ -6,22 +6,18 @@ from typing import List, Dict, Optional, Tuple
 class PDFLoader:
     """Handle PDF loading and text extraction — both essay and numeric results"""
 
-    # ── Questions to keep (1-based index within each subsection) ─────────────
+    # Questions to keep (Hand picked during meetings with supervisor)
     KEEP_QUESTIONS = {
         'core':        {1, 4, 6},
         'course':      {4},
         'lect':        {1, 3, 7},
     }
 
-    # Threshold: keep answer rows that together account for this % of responses
-    CUMULATIVE_THRESHOLD = 0.75   # top 75% of responses
+    # Threshold: keep answer rows that together account for this 75% of responses
+    CUMULATIVE_THRESHOLD = 0.75   
 
     def __init__(self):
         self.rows = []
-
-    # =========================================================================
-    # METADATA HELPERS
-    # =========================================================================
 
     def extract_essay_metadata(self, block_text: str) -> Tuple:
         """Extract metadata from an ESSAY RESULTS block"""
@@ -65,9 +61,6 @@ class PDFLoader:
 
         return course_code, academic_year, section
 
-    # =========================================================================
-    # ESSAY EXTRACTION  (unchanged logic, tidied)
-    # =========================================================================
 
     def load_pdf(self, pdf_path: str) -> pd.DataFrame:
         """Extract essay reviews → DataFrame"""
@@ -110,32 +103,8 @@ class PDFLoader:
 
         return pd.DataFrame(rows)
 
-    # =========================================================================
-    # NUMERIC EXTRACTION
-    # =========================================================================
-
     def load_numeric_pdf(self, pdf_path: str) -> pd.DataFrame:
-        """
-        Extract numeric rating data from NUMERIC RESULTS blocks.
-
-        Returns a DataFrame with one row per (question, answer_label) that
-        survives the cumulative-percentage threshold filter.
-
-        Columns
-        -------
-        course_code, academic_year, section,
-        subsection          : 'core' | 'course' | 'lect'
-        question_number     : int
-        question_text       : str  (full question wording)
-        answer_label        : str  (e.g. '7 = Strongly Agree')
-        answer_value        : int  (numeric scale value, or None for N/A)
-        frequency           : int
-        percentage          : float
-        mean                : float
-        median              : float
-        response_n          : int   (numerator of response rate)
-        response_total      : int   (denominator of response rate)
-        """
+        
         with pdfplumber.open(pdf_path) as pdf:
             pages_text = [p.extract_text() for p in pdf.pages if p.extract_text()]
 
@@ -161,31 +130,23 @@ class PDFLoader:
         if df.empty:
             return df
 
-        # ── Apply threshold filter ────────────────────────────────────────────
         df = self._apply_threshold_filter(df)
 
         return df.reset_index(drop=True)
 
-    # ─────────────────────────────────────────────────────────────────────────
-
     def _parse_numeric_block(
         self, block: str, course_code: str, academic_year: str, section: str
     ) -> List[Dict]:
-        """
-        Split a NUMERIC RESULTS block into core / course / lect subsections
-        and parse only the questions we want.
-        """
+       
         rows = []
 
-        # Locate subsection boundaries
         core_match   = re.search(r'Evaluation of Core Institutional Questions', block)
         course_match = re.search(r'Evaluation of Course Level Questions',       block)
         lect_match   = re.search(r'Evaluation of LECT \d+',                    block)
 
         if not core_match:
-            return rows   # no numeric data found
+            return rows   
 
-        # Slice each subsection text
         core_start   = core_match.end()
         course_start = course_match.start() if course_match else len(block)
         lect_start   = lect_match.start()   if lect_match   else len(block)
@@ -208,7 +169,6 @@ class PDFLoader:
 
         return rows
 
-    # ─────────────────────────────────────────────────────────────────────────
 
     def _parse_subsection(
         self,
@@ -225,7 +185,6 @@ class PDFLoader:
         """
         rows = []
 
-        # Split on question headers: "1. " at line start (pdfplumber strips indent)
         q_pattern = re.compile(
             r'(?:^|\n)(\d+)\.\s+(.*?)(?=\n\d+\.\s+|\Z)', re.DOTALL
         )
@@ -237,8 +196,6 @@ class PDFLoader:
                 continue
 
             q_body = m.group(2)
-
-            # Question text is everything before "Answers"
             q_text_match = re.match(r'(.*?)\n\s*Answers', q_body, re.DOTALL)
             q_text = (
                 re.sub(r'\s+', ' ', q_text_match.group(1)).strip()
@@ -246,17 +203,13 @@ class PDFLoader:
                 else ''
             )
 
-            # Summary stats
+            
             mean   = self._extract_stat(q_body, 'Mean')
             median = self._extract_stat(q_body, 'Median')
 
-            # Response rate  e.g. "60 / 85"
             rr_match = re.search(r'Response Rate:\s*(\d+)\s*/\s*(\d+)', q_body)
             resp_n     = int(rr_match.group(1)) if rr_match else None
             resp_total = int(rr_match.group(2)) if rr_match else None
-
-            # Answer rows: "7 = Strongly Agree   30   50.00%"
-            # pdfplumber collapses whitespace so we anchor on line start
             answer_pattern = re.compile(
                 r'^(\d)\s+=\s+(.+?)\s+(\d+)\s+([\d.]+)%',
                 re.MULTILINE
@@ -286,7 +239,6 @@ class PDFLoader:
 
         return rows
 
-    # ─────────────────────────────────────────────────────────────────────────
 
     @staticmethod
     def _extract_stat(text: str, stat_name: str) -> Optional[float]:
@@ -294,7 +246,6 @@ class PDFLoader:
         m = re.search(rf'{stat_name}:\s*([\d.]+)', text)
         return float(m.group(1)) if m else None
 
-    # ─────────────────────────────────────────────────────────────────────────
 
     def _apply_threshold_filter(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -314,7 +265,6 @@ class PDFLoader:
                       'subsection', 'question_number']
 
         for _, grp in df.groupby(group_cols, sort=False):
-            # Sort descending by frequency so we accumulate from most-chosen
             grp_sorted = grp.sort_values('frequency', ascending=False)
             total      = grp_sorted['frequency'].sum()
 

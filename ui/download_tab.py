@@ -10,7 +10,7 @@ import io
 import os
 from datetime import datetime
 
-# ReportLab imports
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
@@ -23,7 +23,6 @@ from reportlab.platypus import (
 from reportlab.platypus import KeepTogether
 
 
-# ── Colour constants ──────────────────────────────────────────────────────────
 NAVY     = colors.HexColor('#1E3A8A')
 BLUE     = colors.HexColor('#2563EB')
 GREEN    = colors.HexColor('#4CAF50')
@@ -32,8 +31,6 @@ AMBER    = colors.HexColor('#FFC107')
 LIGHT_BG = colors.HexColor('#EFF6FF')
 GREY     = colors.HexColor('#6B7280')
 
-
-# ── Style helpers ─────────────────────────────────────────────────────────────
 
 def get_styles():
     base = getSampleStyleSheet()
@@ -131,7 +128,7 @@ def df_to_table(df, styles, col_widths=None):
     return t
 
 
-# ── Chart builders ────────────────────────────────────────────────────────────
+
 
 def build_sentiment_chart(df, config):
     """Build overall sentiment pie chart."""
@@ -194,7 +191,6 @@ def build_aspect_sentiment_balance(adf, sentiment_col):
     return fig
 
 
-# ── Main PDF builder ──────────────────────────────────────────────────────────
 
 def build_pdf(config, run_options):
     """
@@ -215,7 +211,6 @@ def build_pdf(config, run_options):
         else 'sentiment'
     )
 
-    # ── Determine group label for context ────────────────────────────────────
     if config['type'] == "📚 Single Course Analysis":
         report_title = f"{config['course']} ({config['year']}) — Course Evaluation Report"
         context_line = f"Single Course Analysis · All sections pooled · {len(df)} reviews"
@@ -230,7 +225,6 @@ def build_pdf(config, run_options):
         report_title = "Cross-Course Comparison Report"
         context_line = f"{' vs '.join(labels)} · {len(df)} reviews"
 
-    # ── Cover page ────────────────────────────────────────────────────────────
     story.append(Spacer(1, 3 * cm))
     story.append(Paragraph("Sentiment Based Course Evaluation Analysis System", styles['Title']))
     story.append(Spacer(1, 0.3 * cm))
@@ -243,7 +237,7 @@ def build_pdf(config, run_options):
     ))
     story.append(Spacer(1, 1 * cm))
 
-    # Summary metrics box
+    
     if 'sentiment' in df.columns:
         sc = df['sentiment'].value_counts().to_dict()
         metrics_data = [
@@ -275,7 +269,6 @@ def build_pdf(config, run_options):
 
     story.append(PageBreak())
 
-    # ── SECTION 1: SENTIMENT ─────────────────────────────────────────────────
     if run_options.get('sentiment') and 'sentiment' in df.columns:
         story += section_header('1. Sentiment Analysis', styles)
         story.append(Paragraph(
@@ -295,7 +288,6 @@ def build_pdf(config, run_options):
                 styles['Caption']
             ))
 
-        # Sentiment breakdown table
         if config['type'] in ["🔄 Compare Sections (Same Course, Same Year)",
                                "📅 Compare Years (Same Course)",
                                "🔬 Cross-Course Comparison"]:
@@ -332,7 +324,6 @@ def build_pdf(config, run_options):
 
         story.append(PageBreak())
 
-    # ── SECTION 2: ASPECT ANALYSIS ───────────────────────────────────────────
     if run_options.get('aspect') and adf is not None and len(adf) > 0:
         story += section_header('2. Aspect-Based Sentiment Analysis', styles)
         story.append(Paragraph(
@@ -395,7 +386,6 @@ def build_pdf(config, run_options):
 
         story.append(PageBreak())
 
-    # ── SECTION 3: EMOTION ANALYSIS ──────────────────────────────────────────
     if run_options.get('emotion') and 'dominant_emotion' in df.columns:
         story += section_header('3. Emotion Analysis', styles)
         story.append(Paragraph(
@@ -440,7 +430,7 @@ def build_pdf(config, run_options):
 
         story.append(PageBreak())
 
-    # ── SECTION 4: LLM SUMMARY ───────────────────────────────────────────────
+
     llm_summary = st.session_state.get('llm_summary_text')
     if llm_summary:
         story += section_header('4. LLM-Generated Course Improvement Report', styles)
@@ -460,7 +450,6 @@ def build_pdf(config, run_options):
 
         story.append(PageBreak())
 
-    # ── SECTION 5: RQ2 ───────────────────────────────────────────────────────
     rq2_data = st.session_state.get('rq2_results')
     if rq2_data is not None:
         story += section_header('5. RQ2 — Aspect Predictors of Negative Evaluations', styles)
@@ -520,7 +509,6 @@ def build_pdf(config, run_options):
 
         story.append(PageBreak())
 
-    # ── SECTION 6: NUMERIC INSIGHTS ──────────────────────────────────────────
     if num_df is not None and len(num_df) > 0:
         story += section_header('6. Numeric Survey Ratings', styles)
         story.append(Paragraph(
@@ -585,19 +573,14 @@ def build_pdf(config, run_options):
 
         story.append(PageBreak())
 
-    # ── REFERENCES ────────────────────────────────────────────────────────────
     story += section_header('References', styles)
     refs = [
         'AI@Meta (2024). Llama 3 Model Card. https://github.com/meta-llama/llama3/blob/main/MODEL_CARD.md',
-        'Pang, B., Lee, L., & Vaithyanathan, S. (2002). Thumbs up? Sentiment classification using machine learning techniques. EMNLP.',
-        'Schouten, K., & Frasincar, F. (2016). Survey on aspect-level sentiment analysis. IEEE Transactions on Knowledge and Data Engineering, 28(3), 813-830.',
-        'Nashihin et al. (2025). Disagreement analysis framework for sentiment model evaluation.',
     ]
     for ref in refs:
         story.append(Paragraph(ref, styles['Body']))
         story.append(Spacer(1, 0.2 * cm))
 
-    # ── Build PDF ─────────────────────────────────────────────────────────────
     doc = SimpleDocTemplate(
         buf,
         pagesize=A4,
@@ -621,8 +604,6 @@ def build_pdf(config, run_options):
     return buf.read()
 
 
-# ── Tab renderer ──────────────────────────────────────────────────────────────
-
 def render_download_tab(config):
     st.markdown("### Download Results")
 
@@ -631,7 +612,6 @@ def render_download_tab(config):
 
     col1, col2 = st.columns(2)
 
-    # ── Raw CSV downloads (kept as-is) ────────────────────────────────────────
     with col1:
         st.markdown("#### 📊 Raw Data Downloads")
         if st.session_state.df is not None:
@@ -663,7 +643,6 @@ def render_download_tab(config):
                 use_container_width=True
             )
 
-    # ── Summary metrics ───────────────────────────────────────────────────────
     with col2:
         st.markdown("#### 📈 Session Summary")
         df = st.session_state.df
@@ -692,8 +671,7 @@ def render_download_tab(config):
         st.dataframe(summary_df, use_container_width=True, hide_index=True)
 
     st.divider()
-
-    # ── PDF Report ────────────────────────────────────────────────────────────
+    
     st.markdown("#### 📄 Comprehensive PDF Report")
     st.caption(
         "Generates a full report including all visualizations, explanatory text, "
