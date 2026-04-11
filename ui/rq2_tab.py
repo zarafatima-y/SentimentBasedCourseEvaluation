@@ -17,26 +17,21 @@ def render_rq2_tab(config):
     st.markdown("#### What is this analysis doing?")
 
     st.caption(
-        "Since reviews are anonymous, we cannot link any individual student's comments to their "
-        "overall rating. Instead, we work at the group level — each group is one section, year, "
-        "or course depending on your analysis type. For each group, we calculate two things: "
-        "what proportion of that group's overall reviews were negative, and what proportion of "
-        "mentions for each aspect (e.g. difficulty, assessments, instructor) were negative. "
-        "We then ask: when a group has a high negative rate for a particular aspect, does that "
-        "group also tend to have a high overall negative review rate? If yes, that aspect is a "
-        "predictor of negative evaluations. "
-        "This follows the approach of Pang, Lee & Vaithyanathan (2002), who established that "
-        "sentiment features — in their case, word-level signals — can be used as predictors in "
-        "a regression framework to classify or explain overall sentiment outcomes. More recently, "
-        "Schouten & Frasincar (2016) extended this line of work specifically to aspect-level "
-        "sentiment, showing that individual aspect sentiments carry predictive signal about "
-        "overall satisfaction beyond what whole-text analysis captures. Our analysis applies "
-        "the same principle: aspect-level negative rates are the predictors, and the group's "
-        "overall negative review rate is the outcome. We use OLS linear regression to estimate "
-        "which aspects most strongly drive that outcome. A positive coefficient means that when "
-        "a group rates that aspect negatively, they also tend to rate the course negatively overall. "
-        "A negative coefficient means the opposite — groups that struggle with that aspect still "
-        "tend to leave positive overall reviews, suggesting it has less influence on overall perception."
+        "Since reviews are anonymous, we cannot link individual student comments to an overall rating. "
+        "Instead, this analysis works at the group level — each group is one section, year, or course. "
+        "The model asks: across the groups you selected, which aspects explain why some groups are more "
+        "negative overall than others? It is not asking what students in a single group complain about — "
+        "it is asking what differentiates a high-negativity group from a low-negativity group. "
+        "For each group we calculate the overall negative review rate (the outcome) and the negative "
+        "mention rate per aspect (the predictors). OLS linear regression then estimates which aspect "
+        "negative rates best explain the variation in overall negativity across groups. "
+        "A positive coefficient means groups that rate that aspect negatively tend to have higher "
+        "overall negative rates — that aspect is driving the difference between groups. "
+        "A negative coefficient means groups that struggle with that aspect still tend to be positive "
+        "overall — it does not drive overall negativity across groups. "
+        "Following Pang, Lee & Vaithyanathan (2002) and Schouten & Frasincar (2016), aspect-level "
+        "sentiment features carry predictive signal about overall evaluation outcomes beyond what "
+        "whole-text sentiment alone captures."
     )
 
     st.caption(
@@ -287,38 +282,51 @@ def render_rq2_tab(config):
     ).format('{:.1f}%')
     st.dataframe(styled_X, use_container_width=True)
 
+    # ── Predicted vs Actual scatter ──────────────────────────────────────────
     st.divider()
-
-    st.markdown("#### What Do Students Complain About Most?")
+    st.markdown("#### Predicted vs Actual Overall Negative Rate")
     st.caption(
-        "This chart shows the average negative mention rate per aspect across all groups, "
-        "independent of the regression model. It directly answers: which topics do students "
-        "raise as concerns most often? Aspects high here but low in the coefficient chart "
-        "are widespread concerns that affect all groups equally."
+        "Each point is one group. The x-axis shows the overall negative review rate predicted "
+        "by the model based on aspect negative rates. The y-axis shows the actual overall negative "
+        "rate. Points close to the diagonal line mean the model explains that group well. "
+        "Points far from the line are groups where aspect rates alone do not fully explain "
+        "the overall negativity — other factors may be at play."
     )
-    mean_neg = (X_df.mean() * 100).round(1).sort_values(ascending=False).reset_index()
-    mean_neg.columns = ['Aspect', 'Mean Negative %']
-
-    fig_raw = go.Figure(go.Bar(
-        x=mean_neg['Mean Negative %'],
-        y=mean_neg['Aspect'],
-        orientation='h',
-        marker_color='#F44336',
-        text=mean_neg['Mean Negative %'].apply(lambda x: f"{x:.1f}%"),
-        textposition='outside',
-    ))
-    fig_raw.update_layout(
-        height=max(300, len(mean_neg) * 38),
-        margin=dict(l=20, r=60, t=20, b=30),
-        xaxis=dict(title='Mean Negative Mention Rate (%)', range=[0, 105]),
-        yaxis=dict(autorange='reversed'),
-        plot_bgcolor='white',
-    )
-    st.plotly_chart(fig_raw, use_container_width=True)
+    if len(groups_rq2) > 2:
+        y_pred = lm.predict(X_sc_var)
+        fig_scatter = go.Figure()
+        min_val = min(min(y), min(y_pred)) * 100
+        max_val = max(max(y), max(y_pred)) * 100
+        fig_scatter.add_trace(go.Scatter(
+            x=[min_val, max_val], y=[min_val, max_val],
+            mode='lines', line=dict(dash='dash', color='grey', width=1),
+            name='Perfect fit', showlegend=True
+        ))
+        fig_scatter.add_trace(go.Scatter(
+            x=(y_pred * 100).round(1),
+            y=(y * 100).round(1),
+            mode='markers+text',
+            text=group_labels,
+            textposition='top center',
+            marker=dict(size=12, color='#2563EB'),
+            name='Groups',
+        ))
+        fig_scatter.update_layout(
+            xaxis=dict(title='Predicted Overall Negative % (from model)', range=[0, 100]),
+            yaxis=dict(title='Actual Overall Negative %', range=[0, 100]),
+            height=420,
+            plot_bgcolor='white',
+            margin=dict(t=30, b=40, l=40, r=20),
+        )
+        st.plotly_chart(fig_scatter, use_container_width=True)
+    else:
+        st.info("Predicted vs Actual chart requires 3 or more groups.")
 
     st.divider()
 
-    # ── Overall interpretation ────────────────────────────────────────────────
+
+    st.divider()
+
     st.markdown("#### Interpretation")
 
     top1 = coef_df.iloc[0]
@@ -368,7 +376,6 @@ def render_rq2_tab(config):
         "interpreted with caution. This analysis is exploratory and descriptive."
     )
 
-    # ── Per-group specific findings ───────────────────────────────────────────
     st.divider()
     st.markdown("#### Group-Specific Findings")
     st.caption(
@@ -444,7 +451,6 @@ def render_rq2_tab(config):
         st.write(para)
         group_summaries.append({'group': grp_str, 'summary': para})
 
-    # ── Save results to session state for PDF ─────────────────────────────────
     st.session_state['rq2_results'] = {
         'coef_df':         coef_df,
         'r2':              r2,
