@@ -52,9 +52,6 @@ def render_rq2_tab(config):
         else 'sentiment'
     )
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # LAYER 1 — GLOBAL ANSWER (all uploaded data, ignores Stage 3 selection)
-    # ══════════════════════════════════════════════════════════════════════════
     st.markdown("## 🌐 Global Answer — Across All Uploaded Data")
     st.caption(
         "This section uses **every review uploaded**, ignoring the groups you selected "
@@ -150,10 +147,6 @@ def render_rq2_tab(config):
             st.dataframe(global_df, use_container_width=True, hide_index=True)
 
     st.divider()
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # LAYER 2 — COMPARATIVE ANSWER (regression on selected groups)
-    # ══════════════════════════════════════════════════════════════════════════
     st.markdown("## 📊 Comparative Answer — Regression Across Selected Groups")
     st.caption(
         "This section answers: *among the groups you picked in Stage 3, what separates "
@@ -331,10 +324,6 @@ def render_rq2_tab(config):
                 f"(so it doesn't differentiate your selected groups), while {top_comparative} "
                 f"is what makes some of your selected groups worse than others."
             )
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # LAYER 3 — PER-GROUP ANSWER
-    # ══════════════════════════════════════════════════════════════════════════
     st.divider()
     st.markdown("## 👥 Per-Group Answer — Group-Specific Findings")
     st.caption(
