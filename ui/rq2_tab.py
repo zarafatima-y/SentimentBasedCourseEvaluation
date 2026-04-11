@@ -10,22 +10,18 @@ def render_rq2_tab(config):
     st.markdown("### 📉 RQ2: Which Aspects Most Predict Negative Course Evaluations?")
 
     st.markdown(
-        "**Research Question:** Across the groups you selected, which aspects best explain "
-        "why some groups end up more negative overall than others?"
+        "**Research Question:** Which aspects are associated with negative course evaluations? "
+        "This tab answers the question at **three levels** — global (all uploaded data), "
+        "comparative (regression across the groups you selected), and per-group (one paragraph "
+        "per selected group). These three views can legitimately disagree, and the disagreements "
+        "are informative."
     )
 
     st.caption(
         "Since reviews are anonymous, we cannot link individual comments to individual overall "
-        "ratings. Instead, this analysis works at the group level — each group is one section, "
-        "year, or course. For each group we calculate the overall negative review rate (the outcome) "
-        "and the negative mention rate per aspect (the predictors). OLS linear regression then "
-        "estimates which aspect negative rates track most closely with overall negativity across "
-        "groups. A positive coefficient means groups that rate that aspect negatively tend to have "
-        "higher overall negative rates — that aspect differentiates high-negativity groups from "
-        "low-negativity ones. A negative coefficient means the aspect does not drive overall "
-        "negativity in this comparison. "
-        "For a group-by-group breakdown of the single worst aspect in each group, see the "
-        "Group-Specific Findings section below the chart. "
+        "ratings. The comparative view works at the group level — each group is one section, "
+        "year, or course — and uses OLS linear regression to estimate which aspect negative rates "
+        "track most closely with overall negativity across groups. "
         "Following Pang, Lee & Vaithyanathan (2002) and Schouten & Frasincar (2016), aspect-level "
         "sentiment features carry predictive signal about overall evaluation outcomes beyond what "
         "whole-text sentiment alone captures."
@@ -36,12 +32,6 @@ def render_rq2_tab(config):
         "classification using machine learning techniques. EMNLP. "
         "Schouten, K., & Frasincar, F. (2016). Survey on aspect-level sentiment analysis. "
         "IEEE Transactions on Knowledge and Data Engineering, 28(3), 813-830."
-    )
-
-    st.info(
-        "Note: this model requires at least 2 groups to fit. With only 2 groups the model "
-        "will fit perfectly (R² = 1.0) but coefficients are unreliable — treat results as "
-        "descriptive only. For more robust estimates, use 3 or more groups."
     )
 
     st.divider()
@@ -60,6 +50,117 @@ def render_rq2_tab(config):
         'aspect_sentiment'
         if 'aspect_sentiment' in adf_rq2.columns
         else 'sentiment'
+    )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # LAYER 1 — GLOBAL ANSWER (all uploaded data, ignores Stage 3 selection)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("## 🌐 Global Answer — Across All Uploaded Data")
+    st.caption(
+        "This section uses **every review uploaded**, ignoring the groups you selected "
+        "in Stage 3. It answers the department-wide question: *across all courses in your "
+        "data, which aspects appear most often in negative reviews?* This is independent "
+        "of the regression below and gives an absolute baseline that is not affected by "
+        "which specific courses you are currently comparing."
+    )
+
+    neg_reviews_global = main_rq2[main_rq2['sentiment'] == 'Negative']
+    total_neg_reviews  = len(neg_reviews_global)
+    top_global_aspect  = None
+    global_df          = None
+
+    if total_neg_reviews == 0:
+        st.info("No negative reviews found in the uploaded data — skipping global view.")
+    else:
+        if 'review' in adf_rq2.columns and 'review' in main_rq2.columns:
+            neg_review_texts = set(neg_reviews_global['review'].tolist())
+            adf_in_neg       = adf_rq2[adf_rq2['review'].isin(neg_review_texts)]
+        else:
+            adf_in_neg = adf_rq2[adf_rq2[s_col_rq2] == 'Negative']
+
+        global_rows = []
+        all_aspects_global = sorted(adf_rq2['aspect'].dropna().unique().tolist())
+
+        for asp in all_aspects_global:
+            reviews_with_asp = (
+                adf_in_neg[adf_in_neg['aspect'] == asp]['review'].nunique()
+                if 'review' in adf_in_neg.columns else 0
+            )
+            share_of_neg_reviews = (
+                round(reviews_with_asp / total_neg_reviews * 100, 1)
+                if total_neg_reviews > 0 else 0
+            )
+
+            asp_all = adf_rq2[adf_rq2['aspect'] == asp]
+            total_mentions = len(asp_all)
+            neg_rate = (
+                round((asp_all[s_col_rq2] == 'Negative').sum() / total_mentions * 100, 1)
+                if total_mentions > 0 else 0
+            )
+
+            global_rows.append({
+                'Aspect': asp,
+                'Share of Negative Reviews (%)': share_of_neg_reviews,
+                'Negative Mention Rate (%)':     neg_rate,
+                'Total Mentions':                total_mentions,
+            })
+
+        global_df = (
+            pd.DataFrame(global_rows)
+            .sort_values('Share of Negative Reviews (%)', ascending=False)
+            .reset_index(drop=True)
+        )
+
+        col_g1, col_g2 = st.columns([3, 2])
+
+        with col_g1:
+            st.markdown("**Aspects most associated with negative reviews (global)**")
+            fig_global = go.Figure(go.Bar(
+                x=global_df['Share of Negative Reviews (%)'],
+                y=global_df['Aspect'],
+                orientation='h',
+                marker_color='#F44336',
+                text=global_df['Share of Negative Reviews (%)'].apply(lambda x: f"{x:.1f}%"),
+                textposition='outside',
+            ))
+            fig_global.update_layout(
+                height=max(320, len(global_df) * 34),
+                margin=dict(l=20, r=60, t=20, b=30),
+                xaxis=dict(title='% of negative reviews mentioning this aspect'),
+                yaxis=dict(autorange='reversed'),
+                plot_bgcolor='white',
+            )
+            st.plotly_chart(fig_global, use_container_width=True)
+
+        with col_g2:
+            st.markdown("**Global summary**")
+            st.metric("Total reviews uploaded", f"{len(main_rq2):,}")
+            st.metric("Negative reviews", f"{total_neg_reviews:,}")
+
+            top_global = global_df.iloc[0]
+            top_global_aspect = top_global['Aspect']
+            st.markdown(
+                f"**Top aspect department-wide:** {top_global_aspect} — "
+                f"appears in {top_global['Share of Negative Reviews (%)']:.1f}% of all "
+                f"negative reviews uploaded, and {top_global['Negative Mention Rate (%)']:.1f}% "
+                f"of its own mentions were negative."
+            )
+
+        with st.expander("Full global table (all aspects)"):
+            st.dataframe(global_df, use_container_width=True, hide_index=True)
+
+    st.divider()
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # LAYER 2 — COMPARATIVE ANSWER (regression on selected groups)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown("## 📊 Comparative Answer — Regression Across Selected Groups")
+    st.caption(
+        "This section answers: *among the groups you picked in Stage 3, what separates "
+        "the more-negative ones from the less-negative ones?* It is a comparison question, "
+        "not an absolute one. If the top aspect here differs from the global top above, "
+        "that is informative — it means the selected groups differ on something that is not "
+        "the department's biggest overall concern."
     )
 
     if config['type'] == "🔄 Compare Sections (Same Course, Same Year)":
@@ -85,8 +186,9 @@ def render_rq2_tab(config):
 
     if len(groups_rq2) < 2:
         st.warning(
-            f"Only {len(groups_rq2)} group(s) found. At least 2 groups are needed to fit the model. "
-            "Try Compare Sections, Compare Years, or Cross-Course analysis."
+            f"Only {len(groups_rq2)} group(s) found. At least 2 groups are needed to fit the "
+            "regression. The global view above still applies. Try Compare Sections, Compare "
+            "Years, or Cross-Course analysis for the comparative layer."
         )
         st.markdown("#### Aspect Negative Rate by Group")
         raw_rows = []
@@ -104,6 +206,12 @@ def render_rq2_tab(config):
             pivot_raw = raw_df.pivot_table(index='Aspect', columns=grp_rq2, values='Negative %').round(1)
             st.dataframe(pivot_raw, use_container_width=True)
         return
+
+    st.info(
+        "Note: this model requires at least 2 groups to fit. With only 2 groups the model "
+        "will fit perfectly (R² = 1.0) but coefficients are unreliable — treat results as "
+        "descriptive only. For more robust estimates, use 3 or more groups."
+    )
 
     X_rows, y_vals, group_labels = [], [], []
     for gv in groups_rq2:
@@ -159,7 +267,6 @@ def render_rq2_tab(config):
     coef_range = coef_df['Coefficient'].abs().max()
     near_zero  = coef_range < 0.01
 
-    # ── Coefficient chart ────────────────────────────────────────────────────
     st.markdown("#### Standardised Coefficients — Aspect Influence on Negative Evaluations")
     st.caption(
         f"Showing top {max_predictors} aspects by cross-group variance. Coefficients are "
@@ -207,14 +314,34 @@ def render_rq2_tab(config):
     )
     st.plotly_chart(fig_coef, use_container_width=True)
 
-    # ── Group-Specific Findings (promoted to right after the chart) ──────────
+    # Global-vs-comparative agreement callout
+    if top_global_aspect is not None and not coef_df.empty:
+        top_comparative = coef_df.iloc[0]['Aspect']
+        if top_comparative == top_global_aspect:
+            st.success(
+                f"✓ The comparative view agrees with the global view — **{top_comparative}** "
+                f"is the top aspect at both levels. Strong signal."
+            )
+        else:
+            st.info(
+                f"Note: the comparative view picks **{top_comparative}** as the top "
+                f"differentiator across your selected groups, while the global view "
+                f"picks **{top_global_aspect}** as the department-wide top concern. "
+                f"This means {top_global_aspect} is a shared concern across most courses "
+                f"(so it doesn't differentiate your selected groups), while {top_comparative} "
+                f"is what makes some of your selected groups worse than others."
+            )
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # LAYER 3 — PER-GROUP ANSWER
+    # ══════════════════════════════════════════════════════════════════════════
     st.divider()
-    st.markdown("#### Group-Specific Findings")
+    st.markdown("## 👥 Per-Group Answer — Group-Specific Findings")
     st.caption(
         "For each group, the aspect with the highest negative mention rate is identified "
         "alongside the group's overall negative review rate. This answers the practical "
         "question — *for this specific group, what is the biggest concern?* — independently "
-        "of the cross-group regression above."
+        "of the global and comparative views above."
     )
 
     group_summaries = []
@@ -280,9 +407,8 @@ def render_rq2_tab(config):
         st.write(para)
         group_summaries.append({'group': grp_str, 'summary': para})
 
-    # ── Model input table (kept, simplified placement) ───────────────────────
     st.divider()
-    st.markdown("#### Aspect Negative Rate by Group (Model Input)")
+    st.markdown("#### Aspect Negative Rate by Group (Regression Input)")
     st.caption(
         "Each cell shows the percentage of mentions for that aspect that were negative "
         "in that group. The rightmost column shows the overall negative review rate for "
@@ -305,7 +431,6 @@ def render_rq2_tab(config):
         "interpreted with caution. This analysis is exploratory and descriptive."
     )
 
-    # Build a short interp string for downstream consumers (PDF export etc.)
     top1 = coef_df.iloc[0]
     if near_zero:
         interp = (
@@ -324,9 +449,11 @@ def render_rq2_tab(config):
         )
 
     st.session_state['rq2_results'] = {
-        'coef_df':         coef_df,
-        'r2':              r2,
-        'n_groups':        len(groups_rq2),
-        'interp':          interp,
-        'group_summaries': group_summaries,
+        'coef_df':           coef_df,
+        'r2':                r2,
+        'n_groups':          len(groups_rq2),
+        'interp':            interp,
+        'group_summaries':   group_summaries,
+        'global_top_aspect': top_global_aspect,
+        'global_df':         global_df,
     }
