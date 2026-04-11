@@ -267,6 +267,9 @@ elif st.session_state.stage == 'preprocess':
 
                 st.session_state.processing_time['cleaning'] = time.time() - start_time
                 st.success(f"‼️ Cleaning complete — {len(st.session_state.df)} reviews remaining")
+                # Stable baseline for RQ2 Global layer — no analysis columns yet.
+                st.session_state.df_clean = st.session_state.df.copy()
+                st.session_state.pop('aspect_df_full', None)
                 st.session_state.stage = 'analyze'
                 st.rerun()
     else:
@@ -535,7 +538,69 @@ elif st.session_state.stage == 'analyze':
                 'radar': show_radar
             }
 
-            filtered_df = st.session_state.df.copy()
+            # ── Global baseline (all uploaded data) ──────────────────────────────
+            # Always start from the full clean snapshot so analysis runs on every
+            # review, not just the Stage 3 selection.  df_full / aspect_df_full are
+            # consumed by RQ2's Global layer; filtered_df / aspect_df are used by
+            # the Comparative and Per-group layers.
+            full_df = st.session_state.get('df_clean', st.session_state.df).copy()
+            full_df['review'] = full_df['review'].fillna('').astype(str)
+
+            if run_sentiment:
+                status_text.text("📊 Running sentiment analysis...")
+                start_time = time.time()
+                sentiment = SentimentAnalyzer()
+                results['sentiment'] = sentiment.analyze(full_df['review'].tolist())
+                full_df = pd.concat(
+                    [full_df.reset_index(drop=True), results['sentiment'].reset_index(drop=True)],
+                    axis=1
+                )
+                st.session_state.df_full = full_df
+                st.session_state.processing_time['sentiment'] = time.time() - start_time
+                progress_bar.progress(0.25)
+
+            if run_aspect:
+                status_text.text("🔍 Extracting aspects and analyzing sentiment...")
+                start_time = time.time()
+
+                # Only re-run aspect on the full dataset when we don't already have
+                # a complete snapshot (i.e. first run after a clean or re-upload).
+                need_aspect_global = (
+                    'aspect_df_full' not in st.session_state
+                    or st.session_state.aspect_df_full is None
+                    or len(st.session_state.aspect_df_full) == 0
+                )
+                if need_aspect_global:
+                    aspect = AspectAnalyzer()
+                    full_adf = aspect.analyze_all(full_df)
+
+                    if len(full_adf) > 0:
+                        rv2c, rv2y, rv2s = {}, {}, {}
+                        for _, row in full_df.iterrows():
+                            key = str(row['review']).strip().lower()
+                            rv2c[key] = row['course_code']
+                            rv2y[key] = row['academic_year']
+                            rv2s[key] = row['section']
+                        keys = full_adf['review'].str.strip().str.lower()
+                        full_adf['course_code']   = keys.map(rv2c).fillna('Unknown')
+                        full_adf['academic_year'] = keys.map(rv2y).fillna('Unknown')
+                        full_adf['section']       = keys.map(rv2s).fillna('Unknown')
+                        if 'review_clean' not in full_adf.columns:
+                            full_adf['review_clean'] = keys
+                        st.session_state.aspect_df_full = full_adf
+                    else:
+                        st.warning("⚠️ No aspects were detected in the reviews.")
+                        st.session_state.aspect_df_full = pd.DataFrame(
+                            columns=['review', 'aspect', 'sentiment', 'confidence',
+                                     'method', 'course_code', 'academic_year', 'section', 'review_clean']
+                        )
+
+                st.session_state.processing_time['aspect'] = time.time() - start_time
+                progress_bar.progress(0.5)
+
+            # ── Stage 3 filter ────────────────────────────────────────────────────
+            # Filter the fully-analyzed full_df down to the user's selection.
+            filtered_df = full_df.copy()
 
             if analysis_type == "📚 Single Course Analysis":
                 filtered_df = filtered_df[
@@ -560,8 +625,7 @@ elif st.session_state.stage == 'analyze':
                         (filtered_df['course_code'] == course_code) &
                         (filtered_df['academic_year'] == year)
                     )
-                filtered_df = filtered_df[mask]
-                filtered_df = filtered_df.copy()
+                filtered_df = filtered_df[mask].copy()
                 filtered_df['course_year'] = (
                     filtered_df['course_code'] + ' (' +
                     filtered_df['academic_year'].astype(str) + ')'
@@ -569,58 +633,19 @@ elif st.session_state.stage == 'analyze':
 
             st.session_state.filtered_df = filtered_df
 
-            if run_sentiment:
-                status_text.text("📊 Running sentiment analysis...")
-                start_time = time.time()
-                sentiment = SentimentAnalyzer()
-                results['sentiment'] = sentiment.analyze(filtered_df['review'].tolist())
-                filtered_df = pd.concat(
-                    [filtered_df.reset_index(drop=True), results['sentiment'].reset_index(drop=True)],
-                    axis=1
-                )
-                st.session_state.processing_time['sentiment'] = time.time() - start_time
-                progress_bar.progress(0.25)
-
+            # Filter aspect_df_full to the Stage 3 selection by matching review text.
             if run_aspect:
-                status_text.text("🔍 Extracting aspects and analyzing sentiment...")
-                start_time = time.time()
-                filtered_df['review'] = filtered_df['review'].fillna('').astype(str)
-
-                aspect = AspectAnalyzer()
-                st.session_state.aspect_df = aspect.analyze_all(filtered_df)
-
-                if len(st.session_state.aspect_df) > 0:
-                    review_to_course  = {}
-                    review_to_year    = {}
-                    review_to_section = {}
-
-                    for _, row in filtered_df.iterrows():
-                        key = str(row['review']).strip().lower()
-                        review_to_course[key]  = row['course_code']
-                        review_to_year[key]    = row['academic_year']
-                        review_to_section[key] = row['section']
-
-                    adf = st.session_state.aspect_df
-                    keys = adf['review'].str.strip().str.lower()
-                    adf['course_code']   = keys.map(review_to_course).fillna('Unknown')
-                    adf['academic_year'] = keys.map(review_to_year).fillna('Unknown')
-                    adf['section']       = keys.map(review_to_section).fillna('Unknown')
-
-                    if 'review_clean' not in adf.columns:
-                        adf['review_clean'] = keys
-
-                    st.session_state.aspect_df = adf
-                    if 'aspect_df_full' not in st.session_state:
-                        st.session_state.aspect_df_full = st.session_state.aspect_df.copy()
+                full_adf_snap = st.session_state.get('aspect_df_full')
+                if full_adf_snap is not None and len(full_adf_snap) > 0 and 'review' in full_adf_snap.columns:
+                    stage3_reviews = set(filtered_df['review'].tolist())
+                    st.session_state.aspect_df = full_adf_snap[
+                        full_adf_snap['review'].isin(stage3_reviews)
+                    ].copy().reset_index(drop=True)
                 else:
-                    st.warning("⚠️ No aspects were detected in the reviews.")
-                    st.session_state.aspect_df = pd.DataFrame(
+                    st.session_state.aspect_df = st.session_state.get('aspect_df_full', pd.DataFrame(
                         columns=['review', 'aspect', 'sentiment', 'confidence',
                                  'method', 'course_code', 'academic_year', 'section', 'review_clean']
-                    )
-
-                st.session_state.processing_time['aspect'] = time.time() - start_time
-                progress_bar.progress(0.5)
+                    ))
 
             if run_emotion:
                 status_text.text("😊 Analyzing emotions...")
@@ -635,10 +660,6 @@ elif st.session_state.stage == 'analyze':
                 progress_bar.progress(0.75)
 
             st.session_state.df = filtered_df
-            # Snapshot on the first run so RQ2's Global layer has a stable baseline
-            # (df has sentiment at this point; Stage 2 does not).
-            if 'df_full' not in st.session_state:
-                st.session_state.df_full = st.session_state.df.copy()
 
             if run_aspect and st.session_state.aspect_df is not None and len(st.session_state.aspect_df) > 0:
                 status_text.text("🔄 Creating analysis datasets...")
