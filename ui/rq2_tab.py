@@ -41,7 +41,7 @@ def render_rq2_tab(config):
         else 'sentiment'
     )
 
-    st.markdown("## 🌐 Global — Across All Uploaded Data for analysis type")
+    st.markdown("## 🌐 Global — Across All Uploaded Data")
 
     neg_reviews_global = main_rq2[main_rq2['sentiment'] == 'Negative']
     total_neg_reviews  = len(neg_reviews_global)
