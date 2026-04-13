@@ -154,28 +154,58 @@ if st.session_state.stage == 'upload':
         st.markdown("### 📋 Instructions")
         st.info(
             """
-            1. Upload PDF files with course evaluations
-            2. Files should contain 'ESSAY RESULTS' sections
-            3. Each evaluation should have:
-               - Course code (EECS XXXX)
-               - Academic year
-               - Section
-               - Student comments
+            1. Upload one or more course evaluation PDFs
+            2. Each PDF must contain an **ESSAY RESULTS** section with free-text student responses
+            3. Numeric survey results (**NUMERIC RESULTS**) are also extracted automatically if present
+            4. The app reads: course code, academic year, section, response rate, and instructor name
             """
         )
-        with st.expander("📎 Expected Format"):
+        with st.expander("📎 Expected PDF Format"):
             st.code("""
+── ESSAY SECTION ──────────────────────────────
 Essay Results for: Course EECS 2021
-Academic Year: 2023
+Academic Year: 2022
 Section(s): A, B
 
-1) What did you like?
-- The instructor was great
-- Good course content
+1) What did you like about this course?
+   - The instructor was very clear
+2) What would you suggest for improvement?
+   - More practice problems before exams
 
-2) Suggestions for improvement?
-- More examples in lectures
+── NUMERIC SECTION ────────────────────────────
+Numeric Results for: LE EECS 2021
+Academic Year: 2022
+Section(s): B
+Response Rate: 70.59% (60/85)
+Instructor: instructor name
+
+  Evaluation of Core Institutional Questions
+  Evaluation of Course Level Questions
+  Evaluation of LECT 01
             """)
+            st.caption(
+                "The numeric section extracts hand-picked questions from each subsection "
+                "that provide the most actionable insight for course improvement. "
+                "Tutorial-specific questions are not included but tutorial concerns "
+                "will appear in the written student reviews."
+            )
+
+        with st.expander("🖱️ How to Navigate"):
+            st.markdown(
+                """
+**Step 1 — Upload**
+Select your PDF files. Once selected you will see a confirmation message showing how many files were uploaded. A red **Process PDFs** button will appear at the bottom of the page — click it to extract the data and move to the next stage.
+
+**Step 2 — Clean**
+Review your cleaning options (remove nulls, short reviews, normalize text). Click the red **Run Preprocessing** button at the bottom to confirm and proceed.
+
+**Step 3 — Analyze**
+Choose your analysis type, select the courses/sections/years you want to compare, pick which analysis modules to run (sentiment, emotion, aspect), and select your visualization preferences. Click the red **Run Selected Analysis** button at the bottom to run the pipeline.
+
+**Step 4 — Results**
+Your results will appear in a tabbed dashboard. Navigate between tabs to explore sentiment, aspects, emotions, LLM reports, numeric results, and downloads.
+                """
+            )
 
     if uploaded_files and st.button("Process PDFs", type="primary", use_container_width=True):
         with st.spinner("Extracting text from PDFs..."):
