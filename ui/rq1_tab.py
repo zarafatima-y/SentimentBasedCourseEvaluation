@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
-
-from analysis.correlation import CorrelationAnalyzer
 
 
 def render_rq1_tab():
@@ -23,56 +20,69 @@ def render_rq1_tab():
 
     st.divider()
 
-    # ── Pull global data from session state ─────────────────────────────────
+    # ── Pull global data ─────────────────────────────────────────────────────
     main_global   = st.session_state.get('df_full')
     aspect_global = st.session_state.get('aspect_df_full')
 
     if main_global is None or len(main_global) == 0:
         st.warning("No global sentiment data found. Please run sentiment analysis first.")
         return
-
     if aspect_global is None or len(aspect_global) == 0:
         st.warning("No global aspect data found. Please run aspect analysis first.")
         return
-
-    # Resolve sentiment column name
     if 'sentiment' not in main_global.columns:
         st.warning("Sentiment column not found in global data.")
         return
 
-    # Resolve aspect sentiment column name
+    # ── Resolve aspect sentiment column ──────────────────────────────────────
     asp_sent_col = (
         'aspect_sentiment'
         if 'aspect_sentiment' in aspect_global.columns
         else 'sentiment'
     )
 
-    # ── Build the long-format dataframe CorrelationAnalyzer expects ─────────
-    # Merge aspect rows onto the main df so each row has both whole and aspect sentiment.
-    # CorrelationAnalyzer.create_long_format() expects an 'aspects_found' + 'aspect_data'
-    # structure (LLM pipeline), so we build the long df directly here from the already-
-    # exploded aspect_df instead.
+    # ── Build cor_aspect_df exactly as the notebook does ────────────────────
+    # main_global  : one row per review, has 'review' + 'sentiment'
+    # aspect_global: one row per aspect mention, has 'review' + asp_sent_col
+    # We merge so each aspect row carries the whole-text sentiment,
+    # then normalise both columns to Title Case so labels always match.
 
-    main_slim = main_global[['review', 'sentiment']].drop_duplicates('review').copy()
-    main_slim = main_slim.rename(columns={'sentiment': 'whole_sentiment'})
+    main_slim = (
+        main_global[['review', 'sentiment']]
+        .drop_duplicates('review')
+        .copy()
+        .rename(columns={'sentiment': 'whole_sentiment'})
+    )
+    main_slim['whole_sentiment'] = main_slim['whole_sentiment'].str.strip().str.title()
 
     aspect_slim = aspect_global[['review', asp_sent_col]].copy()
     aspect_slim = aspect_slim.rename(columns={asp_sent_col: 'aspect_sentiment'})
+    aspect_slim['aspect_sentiment'] = aspect_slim['aspect_sentiment'].str.strip().str.title()
 
-    long_df = aspect_slim.merge(main_slim, on='review', how='left')
-    long_df = long_df.dropna(subset=['whole_sentiment', 'aspect_sentiment'])
+    cor_aspect_df = aspect_slim.merge(main_slim, on='review', how='left')
+    cor_aspect_df = cor_aspect_df.dropna(subset=['whole_sentiment', 'aspect_sentiment'])
 
-    if len(long_df) == 0:
+    # Assign a stable integer review_id (one id per unique review text)
+    review_ids = (
+        cor_aspect_df[['review']]
+        .drop_duplicates()
+        .reset_index(drop=True)
+        .reset_index()
+        .rename(columns={'index': 'review_id'})
+    )
+    cor_aspect_df = cor_aspect_df.merge(review_ids, on='review', how='left')
+
+    if len(cor_aspect_df) == 0:
         st.warning("Could not match aspect data to whole-text sentiment. Check that both analyses ran correctly.")
         return
 
-    total_reviews = long_df['review'].nunique()
-    total_aspect_mentions = len(long_df)
+    total_reviews         = cor_aspect_df['review_id'].nunique()
+    total_aspect_mentions = len(cor_aspect_df)
 
-    # ── Metric row ───────────────────────────────────────────────────────────
+    # ── Top metrics ──────────────────────────────────────────────────────────
     col1, col2, col3 = st.columns(3)
     col1.metric("Reviews (global)", total_reviews)
-    col2.metric("Aspect mentions", total_aspect_mentions)
+    col2.metric("Aspect mentions",  total_aspect_mentions)
     col3.metric(
         "Avg aspects / review",
         f"{total_aspect_mentions / total_reviews:.2f}" if total_reviews > 0 else "—"
@@ -80,56 +90,75 @@ def render_rq1_tab():
 
     st.divider()
 
-    # ── ODR ──────────────────────────────────────────────────────────────────
+    # ── ODR — exact notebook logic ───────────────────────────────────────────
     st.markdown("## 📐 Overall Disagreement Rate (ODR)")
     st.caption(
         "ODR = proportion of reviews where **at least one** aspect sentiment differs from "
-        "the whole-text sentiment. A high ODR means the document-level label misses "
-        "important nuance captured at the aspect level."
+        "the whole-text sentiment (Nashihin et al. 2025). A high ODR means the document-level "
+        "label misses important nuance captured at the aspect level."
     )
 
-    # Inline ODR calculation (mirrors CorrelationAnalyzer.calculate_disagreement_rate)
-    long_df = long_df.reset_index(drop=True)
-    long_df['review_id'] = long_df.groupby('review').ngroup()
-
     def has_disagreement(group):
-        whole = group['whole_sentiment'].iloc[0]
-        return any(group['aspect_sentiment'] != whole)
+        return any(group['aspect_sentiment'] != group['whole_sentiment'].iloc[0])
 
-    review_disagree = (
-        long_df.groupby('review_id')
+    review_disagreement = (
+        cor_aspect_df
+        .groupby('review_id', group_keys=False)[['aspect_sentiment', 'whole_sentiment']]
         .apply(has_disagreement)
         .reset_index()
     )
-    review_disagree.columns = ['review_id', 'has_disagreement']
+    review_disagreement.columns = ['review_id', 'has_disagreement']
 
-    n_disagree = int(review_disagree['has_disagreement'].sum())
+    n_disagree = int(review_disagreement['has_disagreement'].sum())
     odr        = n_disagree / total_reviews if total_reviews > 0 else 0
+
+    # Thresholds match the notebook exactly
+    if odr > 0.70:
+        nuance_level = "High"
+        nuance_desc  = "Method captures significant additional nuance."
+        alert_fn     = st.error
+        alert_icon   = "🔴"
+    elif odr > 0.40:
+        nuance_level = "Moderate"
+        nuance_desc  = "Method adds meaningful nuance beyond whole-text sentiment."
+        alert_fn     = st.warning
+        alert_icon   = "⚠️"
+    elif odr > 0.20:
+        nuance_level = "Low"
+        nuance_desc  = "Method adds some nuance."
+        alert_fn     = st.info
+        alert_icon   = "🔵"
+    else:
+        nuance_level = "Minimal"
+        nuance_desc  = "Method largely reproduces whole-text sentiment."
+        alert_fn     = st.success
+        alert_icon   = "✅"
 
     odr_col1, odr_col2 = st.columns([1, 2])
 
     with odr_col1:
         fig_gauge = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
+            mode="gauge+number",
             value=round(odr * 100, 1),
-            number={'suffix': '%'},
-            title={'text': "ODR"},
+            number={'suffix': '%', 'font': {'size': 36}},
+            title={'text': "ODR", 'font': {'size': 18}},
             gauge={
                 'axis': {'range': [0, 100]},
                 'bar':  {'color': '#F44336'},
                 'steps': [
-                    {'range': [0,  30], 'color': '#C8E6C9'},
-                    {'range': [30, 60], 'color': '#FFF9C4'},
-                    {'range': [60,100], 'color': '#FFCDD2'},
+                    {'range': [0,  20], 'color': '#C8E6C9'},
+                    {'range': [20, 40], 'color': '#DCEDC8'},
+                    {'range': [40, 70], 'color': '#FFF9C4'},
+                    {'range': [70,100], 'color': '#FFCDD2'},
                 ],
                 'threshold': {
-                    'line':  {'color': '#B71C1C', 'width': 4},
+                    'line':      {'color': '#B71C1C', 'width': 4},
                     'thickness': 0.75,
-                    'value': round(odr * 100, 1),
+                    'value':     round(odr * 100, 1),
                 },
             },
         ))
-        fig_gauge.update_layout(height=280, margin=dict(l=20, r=20, t=40, b=20))
+        fig_gauge.update_layout(height=260, margin=dict(l=20, r=20, t=40, b=10))
         st.plotly_chart(fig_gauge, use_container_width=True)
 
     with odr_col2:
@@ -138,130 +167,134 @@ def render_rq1_tab():
             f"Out of **{total_reviews}** reviews, **{n_disagree}** have at least one aspect "
             f"whose sentiment does not match the overall review sentiment."
         )
-
-        if odr < 0.30:
-            st.success(
-                "✅ **Low disagreement** — whole-text sentiment is a reliable proxy for "
-                "aspect-level sentiment in this dataset."
-            )
-        elif odr < 0.60:
-            st.warning(
-                "⚠️ **Moderate disagreement** — aspect-level analysis reveals meaningful "
-                "nuance not captured by document-level sentiment alone."
-            )
-        else:
-            st.error(
-                "🔴 **High disagreement** — whole-text sentiment frequently masks conflicting "
-                "aspect sentiments. Aspect-level analysis is essential for this dataset."
-            )
+        alert_fn(f"{alert_icon} **{nuance_level} disagreement** — {nuance_desc}")
+        st.markdown(
+            "_Following Nashihin et al. (2025): this quantifies the additional nuance "
+            "captured by aspect-based analysis._"
+        )
 
     st.divider()
 
-    # ── Confusion matrix ─────────────────────────────────────────────────────
+    # ── Confusion matrix — exact notebook logic ──────────────────────────────
     st.markdown("## 🗂️ Confusion Matrix — Whole-Text vs Aspect Sentiment")
     st.caption(
-        "Each cell shows what percentage of aspect mentions belonging to a given whole-text "
-        "sentiment category were labelled with a given aspect sentiment. A perfect agreement "
-        "would show 100% on the diagonal."
+        "Each cell shows what % of aspect mentions belonging to a given whole-text sentiment "
+        "were labelled with a given aspect sentiment. "
+        "Diagonal = agreement; off-diagonal = disagreement."
     )
 
-    # Inline confusion matrix (mirrors CorrelationAnalyzer.create_confusion_matrix)
-    conf = pd.crosstab(
-        long_df['whole_sentiment'],
-        long_df['aspect_sentiment'],
+    conf_pct = pd.crosstab(
+        cor_aspect_df['whole_sentiment'],
+        cor_aspect_df['aspect_sentiment'],
         normalize='index'
     ) * 100
-    conf = conf.round(1)
 
-    # Ensure consistent column/row ordering
-    sentiment_order = [s for s in ['Positive', 'Neutral', 'Negative'] if s in conf.columns or s in conf.index]
-    conf = conf.reindex(
-        index=[s for s in sentiment_order if s in conf.index],
-        columns=[s for s in sentiment_order if s in conf.columns],
-        fill_value=0
+    conf_counts = pd.crosstab(
+        cor_aspect_df['whole_sentiment'],
+        cor_aspect_df['aspect_sentiment'],
     )
 
-    # Heatmap
-    color_scale = [
-        [0.0, '#FFFFFF'],
-        [0.5, '#FFCDD2'],
-        [1.0, '#B71C1C'],
+    # Enforce Negative / Neutral / Positive ordering to match notebook
+    order    = [s for s in ['Negative', 'Neutral', 'Positive']
+                if s in conf_pct.index or s in conf_pct.columns]
+    conf_pct    = conf_pct.reindex(index=order, columns=order, fill_value=0).round(1)
+    conf_counts = conf_counts.reindex(index=order, columns=order, fill_value=0)
+
+    # RdYlGn_r palette — dark green = agreement, dark red = disagreement (notebook cmap)
+    colorscale = [
+        [0.0,  '#006837'],
+        [0.25, '#31a354'],
+        [0.50, '#FFFFBF'],
+        [0.75, '#d7301f'],
+        [1.0,  '#7f0000'],
     ]
 
+    annotations = []
+    for i, row_label in enumerate(conf_pct.index):
+        for j, col_label in enumerate(conf_pct.columns):
+            val = conf_pct.loc[row_label, col_label]
+            cnt = (
+                conf_counts.loc[row_label, col_label]
+                if row_label in conf_counts.index and col_label in conf_counts.columns
+                else 0
+            )
+            annotations.append(dict(
+                x=j, y=i,
+                text=f"<b>{val:.1f}%</b><br><span style='font-size:10px'>n={cnt}</span>",
+                showarrow=False,
+                font=dict(size=13, color='black'),
+            ))
+
     fig_hm = go.Figure(go.Heatmap(
-        z=conf.values,
-        x=[f"Aspect: {c}" for c in conf.columns],
-        y=[f"Whole: {r}" for r in conf.index],
-        colorscale=color_scale,
+        z=conf_pct.values,
+        x=[f"Aspect: {c}" for c in conf_pct.columns],
+        y=[f"Whole: {r}"  for r in conf_pct.index],
+        colorscale=colorscale,
         zmin=0,
+        zmid=50,
         zmax=100,
-        text=[[f"{v:.1f}%" for v in row] for row in conf.values],
-        texttemplate="%{text}",
         showscale=True,
         colorbar=dict(title='%', ticksuffix='%'),
+        hovertemplate=(
+            "Whole-text: %{y}<br>"
+            "Aspect: %{x}<br>"
+            "Percentage: %{z:.1f}%<extra></extra>"
+        ),
     ))
     fig_hm.update_layout(
-        height=320,
-        margin=dict(l=20, r=20, t=20, b=20),
+        annotations=annotations,
+        height=350,
+        margin=dict(l=20, r=20, t=30, b=20),
         xaxis=dict(side='top'),
         plot_bgcolor='white',
     )
     st.plotly_chart(fig_hm, use_container_width=True)
 
-    # Raw counts table alongside
-    with st.expander("📋 View raw counts"):
-        conf_counts = pd.crosstab(
-            long_df['whole_sentiment'],
-            long_df['aspect_sentiment']
-        )
-        conf_counts = conf_counts.reindex(
-            index=[s for s in sentiment_order if s in conf_counts.index],
-            columns=[s for s in sentiment_order if s in conf_counts.columns],
-            fill_value=0
-        )
+    st.caption("Darker green = strong agreement (diagonal). Darker red = disagreement (off-diagonal).")
+
+    with st.expander("📋 View raw counts table"):
         st.dataframe(conf_counts, use_container_width=True)
 
     st.divider()
 
-    # ── Key finding ──────────────────────────────────────────────────────────
+    # ── Key finding — mirrors notebook summary paragraph ─────────────────────
     st.markdown("## 🎯 Key Finding")
 
-    # Pull diagonal agreement rate for the narrative
-    diag_vals = [conf.loc[s, s] for s in sentiment_order if s in conf.index and s in conf.columns]
+    diag_vals     = [conf_pct.loc[s, s] for s in order if s in conf_pct.index and s in conf_pct.columns]
     avg_agreement = sum(diag_vals) / len(diag_vals) if diag_vals else 0
 
-    finding = (
-        f"Across the full uploaded dataset ({total_reviews} reviews, "
-        f"{total_aspect_mentions} aspect mentions), the Overall Disagreement Rate is "
-        f"**{odr*100:.1f}%** — meaning {n_disagree} reviews contain at least one aspect "
-        f"sentiment that contradicts the whole-text label. "
-        f"On average, **{avg_agreement:.1f}%** of aspect mentions within each sentiment "
-        f"category agree with the document-level sentiment. "
-    )
+    # Neutral-row nuance check — mirrors notebook's final paragraph
+    neutral_nuance = ""
+    if 'Neutral' in conf_pct.index:
+        off_diag_neutral = conf_pct.loc['Neutral'].drop('Neutral', errors='ignore').sum()
+        if off_diag_neutral > 40:
+            neutral_nuance = (
+                " Most notably, when whole-text sentiment is Neutral, aspects frequently "
+                "register as Positive or Negative — confirming that students express mixed "
+                "sentiments that average to neutrality."
+            )
 
-    if odr < 0.30:
-        finding += (
-            "This low ODR suggests that document-level sentiment analysis is broadly "
-            "sufficient for this dataset, though aspect analysis still surfaces finer-grained insights."
-        )
-    elif odr < 0.60:
-        finding += (
-            "This moderate ODR confirms that aspect-level analysis adds meaningful value "
-            "beyond whole-text sentiment, particularly for mixed reviews."
-        )
-    else:
-        finding += (
-            "This high ODR indicates that whole-text sentiment is an unreliable summary "
-            "for this dataset — aspect-level analysis is critical for accurate interpretation."
-        )
+    finding = (
+        f"Following the disagreement analysis framework of Nashihin et al. (2025), "
+        f"we calculated an Overall Disagreement Rate (ODR) of **{odr*100:.1f}%** "
+        f"between whole-text and aspect-level sentiment across {total_reviews} reviews "
+        f"({total_aspect_mentions} aspect mentions). "
+        f"This indicates that in {odr*100:.1f}% of reviews, at least one aspect sentiment "
+        f"diverges from the global classification — revealing nuanced, multi-dimensional "
+        f"feedback that whole-text analysis alone would mask. "
+        f"On average, **{avg_agreement:.1f}%** of aspect mentions within each sentiment "
+        f"category agree with the document-level label."
+        f"{neutral_nuance}"
+    )
 
     st.info(finding)
 
     # Persist for download tab
     st.session_state['rq1_results'] = {
-        'odr':            odr,
-        'n_disagree':     n_disagree,
-        'total_reviews':  total_reviews,
-        'confusion_matrix': conf,
-        'finding':        finding,
+        'odr':              odr,
+        'n_disagree':       n_disagree,
+        'total_reviews':    total_reviews,
+        'confusion_pct':    conf_pct,
+        'confusion_counts': conf_counts,
+        'finding':          finding,
     }
