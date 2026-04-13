@@ -204,6 +204,8 @@ Choose your analysis type, select the courses/sections/years you want to compare
 
 **Step 4 — Results**
 Your results will appear in a tabbed dashboard. Navigate between tabs to explore sentiment, aspects, emotions, LLM reports, numeric results, and downloads.
+                
+If you want to start over at any point, click the "Start Over" button in the sidebar to reset the app and upload new files.               
                 """
             )
 
