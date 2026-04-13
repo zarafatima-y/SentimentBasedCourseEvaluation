@@ -28,8 +28,6 @@ def render_rq2_tab(config):
     adf_rq2  = st.session_state.aspect_df
     main_rq2 = st.session_state.df
 
-    # Global layer reads from the full cleaned snapshot, not the filtered analysis subset.
-    # Comparative and Per-group layers continue to use adf_rq2/main_rq2 (Stage 3 filtered).
     adf_global  = st.session_state.get('aspect_df_full', adf_rq2)
     main_global = st.session_state.get('df_full',        main_rq2)
 
