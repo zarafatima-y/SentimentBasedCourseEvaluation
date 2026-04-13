@@ -29,6 +29,7 @@ from ui.emotions_tab import render_emotions_tab
 from ui.llm_tab import render_llm_tab
 from ui.numeric_tab import render_numeric_tab
 from ui.rq2_tab import render_rq2_tab
+from ui.rq1_tab import render_rq1_tab
 from ui.download_tab import render_download_tab
 
 
@@ -778,7 +779,11 @@ elif st.session_state.stage == 'results':
 
         available_tabs = ["📊 Overview"]
         if run_options.get('sentiment') and 'sentiment' in st.session_state.df.columns:
-            available_tabs.append("😊 Sentiment")
+             available_tabs.append("😊 Sentiment")
+        if (run_options.get('sentiment') and run_options.get('aspect')
+            and st.session_state.get('df_full') is not None
+            and st.session_state.get('aspect_df_full') is not None):
+            available_tabs.append("🔗 RQ1: Sentiment Agreement")
         if run_options.get('aspect') and aspect_df is not None and len(aspect_df) > 0:
             available_tabs.append("🔍 Aspects")
         if run_options.get('emotion') and 'dominant_emotion' in st.session_state.df.columns:
@@ -794,15 +799,19 @@ elif st.session_state.stage == 'results':
         tabs     = st.tabs(available_tabs)
         tab_dict = dict(zip(available_tabs, tabs))
 
-        # Overview tab
+        
         with tab_dict["📊 Overview"]:
             render_overview_tab(config)
 
-        # Sentiment tab
         if "😊 Sentiment" in tab_dict:
             with tab_dict["😊 Sentiment"]:
                 render_sentiment_tab(config)
-       
+ 
+        # RQ1 tab — always uses full global data, no config needed
+        if "🔗 RQ1: Sentiment Agreement" in tab_dict:
+            with tab_dict["🔗 RQ1: Sentiment Agreement"]:
+                render_rq1_tab()
+ 
        # Aspect tab
         if "🔍 Aspects" in tab_dict:
             with tab_dict["🔍 Aspects"]:
