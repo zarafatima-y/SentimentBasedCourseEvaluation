@@ -412,7 +412,7 @@ ONE flowing report addressed to a single instructor (or faculty team). Structure
         st.info(
             "⏳ LLM generation can take up to 5+ minutes depending on your hardware "
             "(primarily because the model runs on CPU when no GPU is available). "
-            "Please do not refresh the page."
+            "Please do not refresh the page. Disclaimer: If you encounter an error 403 or similar, it likely means the HuggingFace model server is overloaded, inference provider limits reached or your HF_TOKEN is not set correctly."
         )
         with st.spinner("Building prompt and loading LLM..."):
             try:
