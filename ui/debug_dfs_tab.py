@@ -114,26 +114,53 @@ def render_debug_dfs_tab() -> None:
     )
     main_slim["whole_sentiment"] = main_slim["whole_sentiment"].astype(str).str.strip().str.title()
 
-    aspect_slim = aspect_df_full[["review", asp_sent_col]].copy()
-    aspect_slim = aspect_slim.rename(columns={asp_sent_col: "aspect_sentiment"})
-    aspect_slim["aspect_sentiment"] = aspect_slim["aspect_sentiment"].astype(str).str.strip().str.title()
+    if "review_id" in df_full.columns and "review_id" in aspect_df_full.columns:
+        main_slim = (
+            df_full[["review_id", "sentiment"]]
+            .drop_duplicates("review_id")
+            .copy()
+            .rename(columns={"sentiment": "whole_sentiment"})
+        )
+        main_slim["whole_sentiment"] = main_slim["whole_sentiment"].astype(str).str.strip().str.title()
 
-    cor_aspect_df = aspect_slim.merge(main_slim, on="review", how="left")
+        aspect_cols = ["review_id", "review", asp_sent_col]
+        if "aspect" in aspect_df_full.columns:
+            aspect_cols.append("aspect")
+        if "confidence" in aspect_df_full.columns:
+            aspect_cols.append("confidence")
+
+        aspect_slim = aspect_df_full[aspect_cols].copy()
+        aspect_slim = aspect_slim.rename(columns={asp_sent_col: "aspect_sentiment"})
+        aspect_slim["aspect_sentiment"] = aspect_slim["aspect_sentiment"].astype(str).str.strip().str.title()
+
+        cor_aspect_df = aspect_slim.merge(main_slim, on="review_id", how="left")
+        join_mode = "review_id"
+    else:
+        aspect_slim = aspect_df_full[["review", asp_sent_col]].copy()
+        aspect_slim = aspect_slim.rename(columns={asp_sent_col: "aspect_sentiment"})
+        aspect_slim["aspect_sentiment"] = aspect_slim["aspect_sentiment"].astype(str).str.strip().str.title()
+
+        cor_aspect_df = aspect_slim.merge(main_slim, on="review", how="left")
+        cor_aspect_df = cor_aspect_df.dropna(subset=["whole_sentiment", "aspect_sentiment"])
+
+        review_ids = (
+            cor_aspect_df[["review"]]
+            .drop_duplicates()
+            .reset_index(drop=True)
+            .reset_index()
+            .rename(columns={"index": "review_id"})
+        )
+        cor_aspect_df = cor_aspect_df.merge(review_ids, on="review", how="left")
+        join_mode = "review text fallback"
+
     cor_aspect_df = cor_aspect_df.dropna(subset=["whole_sentiment", "aspect_sentiment"])
-
-    review_ids = (
-        cor_aspect_df[["review"]]
-        .drop_duplicates()
-        .reset_index(drop=True)
-        .reset_index()
-        .rename(columns={"index": "review_id"})
-    )
-    cor_aspect_df = cor_aspect_df.merge(review_ids, on="review", how="left")
 
     col1, col2, col3 = st.columns(3)
     col1.metric("RQ1 whole-text source", "df_full")
     col2.metric("RQ1 aspect source", "aspect_df_full")
     col3.metric("Merged rows", len(cor_aspect_df))
+
+    st.caption(f"Current RQ1 join mode: `{join_mode}`")
 
     st.info(
         "RQ1 should use `df_full` plus `aspect_df_full`, not the filtered `df` or "
@@ -142,4 +169,3 @@ def render_debug_dfs_tab() -> None:
 
     with st.expander("Preview exact RQ1 merged DataFrame (`cor_aspect_df`)", expanded=True):
         st.dataframe(cor_aspect_df.head(50), use_container_width=True)
-

@@ -68,8 +68,8 @@ def render_rq1_tab():
         aspect_slim['aspect_sentiment'] = aspect_slim['aspect_sentiment'].astype(str).str.strip().str.title()
 
         cor_aspect_df = aspect_slim.merge(
-            main_slim[['review_id', 'review', 'whole_sentiment']],
-            on=['review_id', 'review'],
+            main_slim[['review_id', 'whole_sentiment']],
+            on='review_id',
             how='left'
         )
     else:
