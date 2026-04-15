@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import streamlit as st
+from ast import literal_eval
 
 
 VALID_SENTIMENTS = ["Negative", "Neutral", "Positive"]
@@ -11,56 +12,37 @@ def render_rq1_tab():
     st.markdown("### 🔗 RQ1: Whole-Text vs Aspect Sentiment")
     st.caption("This view uses the full uploaded dataset and compares each review's overall sentiment with the sentiments of its detected aspects.")
 
-    main_global = st.session_state.get("df_full")
-    aspect_global = st.session_state.get("aspect_df_full")
-
-    if main_global is None or len(main_global) == 0:
-        st.warning("No global sentiment data found. Please run sentiment analysis first.")
-        return
-    if aspect_global is None or len(aspect_global) == 0:
-        st.warning("No global aspect data found. Please run aspect analysis first.")
-        return
-    if "sentiment" not in main_global.columns:
-        st.warning("`df_full` must contain a `sentiment` column.")
+    llm_ready_df = st.session_state.get("llm_ready_full")
+    if llm_ready_df is None or len(llm_ready_df) == 0:
+        st.warning("No `llm_ready_full` data found. Please run sentiment and aspect analysis first.")
         return
 
-    asp_sent_col = "aspect_sentiment" if "aspect_sentiment" in aspect_global.columns else "sentiment"
-    if asp_sent_col not in aspect_global.columns:
-        st.warning("`aspect_df_full` must contain either `aspect_sentiment` or `sentiment`.")
+    llm_ready_df = llm_ready_df.copy()
+    if "Sentiment_Label" not in llm_ready_df.columns or "aspect_data" not in llm_ready_df.columns:
+        st.warning("`llm_ready_full` is missing `Sentiment_Label` or `aspect_data`.")
         return
 
-    # Recreate llm_ready_df the same way the notebook did: map grouped aspect dicts by review_clean.
-    df = main_global.copy()
-    aspect_df = aspect_global.copy()
-
-    df["review"] = df["review"].fillna("").astype(str)
-    aspect_df["review"] = aspect_df["review"].fillna("").astype(str)
-    df["review_clean"] = df["review"].str.strip().str.lower()
-    aspect_df["review_clean"] = aspect_df["review"].str.strip().str.lower()
-
-    aspect_dict = (
-        aspect_df.groupby("review_clean", sort=False)
-        .apply(
-            lambda x: {
-                row["aspect"]: {
-                    "sentiment": str(row[asp_sent_col]).strip().title(),
-                    "confidence": row.get("confidence"),
-                }
-                for _, row in x.iterrows()
-                if pd.notna(row.get("aspect"))
-            }
-        )
-        .to_dict()
-    )
-
-    llm_ready_df = df.copy().rename(columns={"sentiment": "Sentiment_Label"})
     llm_ready_df["Sentiment_Label"] = llm_ready_df["Sentiment_Label"].astype(str).str.strip().str.title()
-    llm_ready_df["aspect_data"] = llm_ready_df["review_clean"].map(aspect_dict)
-    llm_ready_df["aspect_data"] = llm_ready_df["aspect_data"].apply(
-        lambda x: x if isinstance(x, dict) else {}
-    )
-    llm_ready_df["aspects_found"] = llm_ready_df["aspect_data"].apply(lambda x: list(x.keys()))
-    llm_ready_df["num_aspects"] = llm_ready_df["aspects_found"].apply(len)
+
+    def normalize_aspect_data(value):
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped or stripped == "{}":
+                return {}
+            try:
+                parsed = literal_eval(stripped)
+                return parsed if isinstance(parsed, dict) else {}
+            except (ValueError, SyntaxError):
+                return {}
+        return {}
+
+    llm_ready_df["aspect_data"] = llm_ready_df["aspect_data"].apply(normalize_aspect_data)
+    if "aspects_found" not in llm_ready_df.columns:
+        llm_ready_df["aspects_found"] = llm_ready_df["aspect_data"].apply(lambda x: list(x.keys()))
+    if "num_aspects" not in llm_ready_df.columns:
+        llm_ready_df["num_aspects"] = llm_ready_df["aspects_found"].apply(len)
 
     aspect_rows = []
     for idx, row in llm_ready_df.iterrows():
@@ -164,7 +146,7 @@ def render_rq1_tab():
     with st.expander("RQ1 debug preview", expanded=False):
         st.markdown("`llm_ready_df` preview")
         preview_cols = [
-            col for col in ["review", "review_clean", "Sentiment_Label", "num_aspects", "aspects_found"]
+            col for col in ["review", "review_clean", "Sentiment_Label", "num_aspects", "aspects_found", "aspect_data"]
             if col in llm_ready_df.columns
         ]
         st.dataframe(llm_ready_df[preview_cols].head(20), use_container_width=True)

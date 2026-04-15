@@ -636,6 +636,45 @@ elif st.session_state.stage == 'analyze':
                 st.session_state.processing_time['aspect'] = time.time() - start_time
                 progress_bar.progress(0.5)
 
+            if run_sentiment and run_aspect:
+                llm_ready_full = full_df.copy().rename(columns={'sentiment': 'Sentiment_Label'})
+                llm_ready_full['review'] = llm_ready_full['review'].fillna('').astype(str)
+                llm_ready_full['review_clean'] = llm_ready_full['review'].str.strip().str.lower()
+
+                full_adf_snap = st.session_state.get('aspect_df_full')
+                if full_adf_snap is not None and len(full_adf_snap) > 0:
+                    asp_sent_col_full = (
+                        'aspect_sentiment'
+                        if 'aspect_sentiment' in full_adf_snap.columns
+                        else 'sentiment'
+                    )
+                    aspect_dict = (
+                        full_adf_snap
+                        .assign(review_clean=full_adf_snap['review'].fillna('').astype(str).str.strip().str.lower())
+                        .groupby('review_clean', sort=False)
+                        .apply(
+                            lambda x: {
+                                row['aspect']: {
+                                    'sentiment': row[asp_sent_col_full],
+                                    'confidence': row.get('confidence'),
+                                }
+                                for _, row in x.iterrows()
+                                if pd.notna(row.get('aspect'))
+                            }
+                        )
+                        .to_dict()
+                    )
+                else:
+                    aspect_dict = {}
+
+                llm_ready_full['aspect_data'] = llm_ready_full['review_clean'].map(aspect_dict)
+                llm_ready_full['aspect_data'] = llm_ready_full['aspect_data'].apply(
+                    lambda x: x if isinstance(x, dict) else {}
+                )
+                llm_ready_full['aspects_found'] = llm_ready_full['aspect_data'].apply(lambda x: list(x.keys()))
+                llm_ready_full['num_aspects'] = llm_ready_full['aspects_found'].apply(len)
+                st.session_state.llm_ready_full = llm_ready_full
+
             # ── Stage 3 filter ────────────────────────────────────────────────────
             # Filter the fully-analyzed full_df down to the user's selection.
             filtered_df = full_df.copy()
