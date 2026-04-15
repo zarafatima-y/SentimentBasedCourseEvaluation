@@ -21,7 +21,13 @@ CONFUSION_PCT = pd.DataFrame(
 def render_rq1_tab():
     st.markdown("### 🔗 RQ1: Whole-Text vs Aspect Sentiment")
     st.caption(
-        "This section highlights the key finding that motivated the shift from document-level sentiment alone to aspect-based analysis."
+        "This section presents a research finding from the project dataset used during the study."
+    )
+
+    st.warning(
+        "These results were obtained from the dataset provided during the project and are shown here "
+        "as a supporting finding. They are not meant to represent or summarize whatever files may be "
+        "uploaded into the app at this point."
     )
 
     col1, col2, col3, col4 = st.columns(4)
@@ -33,6 +39,10 @@ def render_rq1_tab():
     st.info(
         "About one in three reviews contained at least one aspect whose sentiment did not match the overall review label. "
         "That gap is the practical reason aspect-based analysis adds value here: whole-text sentiment can miss important nuance."
+    )
+
+    st.caption(
+        "Following Nashihin et al. (2025), this quantifies the additional nuance captured by aspect-based analysis."
     )
 
     lead_col, note_col = st.columns([1.7, 1.1])

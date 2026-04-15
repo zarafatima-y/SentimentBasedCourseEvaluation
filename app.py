@@ -156,9 +156,10 @@ if st.session_state.stage == 'upload':
         st.info(
             """
             1. Upload one or more course evaluation PDFs
-            2. Each PDF must contain an **ESSAY RESULTS** section with free-text student responses
-            3. Numeric survey results (**NUMERIC RESULTS**) are also extracted automatically if present
-            4. The app reads: course code, academic year, section, response rate, and instructor name
+            2. Each PDF must contain both an **ESSAY RESULTS** section and a **NUMERIC RESULTS** section
+            3. The app was built for course evaluation PDFs that include both free-text reviews and numeric survey responses
+            4. Uploading PDFs with only essay data or only numeric data may cause analysis steps to fail, so those files are not supported
+            5. The app reads: course code, academic year, section, response rate, and instructor name
             """
         )
         with st.expander("📎 Expected PDF Format"):
@@ -195,7 +196,7 @@ Instructor: instructor name
             st.markdown(
                 """
 **Step 1 — Upload**
-Select your PDF files. Once selected you will see a confirmation message showing how many files were uploaded. A red **Process PDFs** button will appear at the bottom of the page — click it to extract the data and move to the next stage.
+Select your PDF files. Each PDF must contain both the essay and numeric sections used in the original course evaluation reports. Once selected you will see a confirmation message showing how many files were uploaded. A red **Process PDFs** button will appear at the bottom of the page — click it to extract the data and move to the next stage.
 
 **Step 2 — Clean**
 Review your cleaning options (remove nulls, short reviews, normalize text). Click the red **Run Preprocessing** button at the bottom to confirm and proceed.
@@ -228,8 +229,10 @@ If you want to start over at any point, click the "Start Over" button in the sid
                 os.unlink(tmp_path)
                 progress_bar.progress((i + 1) / len(uploaded_files))
 
-            if all_dfs:
-                st.session_state.df = pd.concat(all_dfs, ignore_index=True)
+            valid_essay_dfs = [df for df in all_dfs if df is not None and len(df) > 0]
+
+            if valid_essay_dfs:
+                st.session_state.df = pd.concat(valid_essay_dfs, ignore_index=True)
                 st.session_state.processing_time['extraction'] = time.time() - start_time
 
                 # Also extract numeric results from the same PDFs
@@ -250,9 +253,29 @@ If you want to start over at any point, click the "Start Over" button in the sid
                 if numeric_dfs:
                     st.session_state.numeric_df = pd.concat(numeric_dfs, ignore_index=True)
 
-                st.success(f"Extracted {len(st.session_state.df)} reviews from {len(uploaded_files)} files")
-                st.session_state.stage = 'preprocess'
-                st.rerun()
+                if st.session_state.df is None or len(st.session_state.df) == 0:
+                    st.error(
+                        "No essay review data could be extracted. Please upload course evaluation PDFs "
+                        "that contain an ESSAY RESULTS section and try again."
+                    )
+                    st.session_state.pop('numeric_df', None)
+                    st.session_state.pop('df', None)
+                elif st.session_state.numeric_df is None or len(st.session_state.numeric_df) == 0:
+                    st.error(
+                        "Essay reviews were found, but no numeric survey data could be extracted. "
+                        "This app expects PDFs that contain both ESSAY RESULTS and NUMERIC RESULTS sections."
+                    )
+                    st.session_state.pop('numeric_df', None)
+                    st.session_state.pop('df', None)
+                else:
+                    st.success(f"Extracted {len(st.session_state.df)} reviews from {len(uploaded_files)} files")
+                    st.session_state.stage = 'preprocess'
+                    st.rerun()
+            else:
+                st.error(
+                    "No essay review data could be extracted from the uploaded PDFs. "
+                    "Please upload reports that contain both ESSAY RESULTS and NUMERIC RESULTS sections."
+                )
 
 
 elif st.session_state.stage == 'preprocess':
