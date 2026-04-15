@@ -637,9 +637,11 @@ elif st.session_state.stage == 'analyze':
                 progress_bar.progress(0.5)
 
             if run_sentiment and run_aspect:
-                llm_ready_full = full_df.copy().rename(columns={'sentiment': 'Sentiment_Label'})
+                llm_ready_full = full_df.copy()
                 llm_ready_full['review'] = llm_ready_full['review'].fillna('').astype(str)
                 llm_ready_full['review_clean'] = llm_ready_full['review'].str.strip().str.lower()
+                if 'Sentiment_Label' not in llm_ready_full.columns and 'sentiment' in llm_ready_full.columns:
+                    llm_ready_full['Sentiment_Label'] = llm_ready_full['sentiment']
 
                 full_adf_snap = st.session_state.get('aspect_df_full')
                 if full_adf_snap is not None and len(full_adf_snap) > 0:
