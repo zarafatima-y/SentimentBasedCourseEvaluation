@@ -67,7 +67,7 @@ class LLMAnalyzer:
         """
 
         payload = {
-            "model": f"{self.model_name}:fastest",
+            "model": f"{self.model_name}:featherless-ai",
             "messages": [
                 {
                     "role": "system",
