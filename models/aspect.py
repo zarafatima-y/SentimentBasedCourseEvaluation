@@ -120,6 +120,7 @@ class AspectAnalyzer:
             for aspect in aspects:
                 result = self.analyze_aspect(text_str, aspect)
                 # Add metadata from the original row
+                result['review_id'] = row.get('review_id', idx)
                 result['review'] = text_str
                 result['course_code'] = row.get('course_code', 'Unknown')
                 result['academic_year'] = row.get('academic_year', 'Unknown')
@@ -131,6 +132,6 @@ class AspectAnalyzer:
             return pd.DataFrame(all_aspect_rows)
         else:
             # Return empty dataframe with expected columns
-            return pd.DataFrame(columns=['review', 'aspect', 'sentiment', 'confidence', 
+            return pd.DataFrame(columns=['review_id', 'review', 'aspect', 'sentiment', 'confidence',
                                         'method', 'course_code', 'academic_year', 
                                         'section', 'review_clean'])

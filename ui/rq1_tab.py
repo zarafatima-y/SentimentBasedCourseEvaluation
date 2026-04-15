@@ -41,36 +41,74 @@ def render_rq1_tab():
         else 'sentiment'
     )
 
-    # ── Build cor_aspect_df exactly as the notebook does ────────────────────
-    # main_global  : one row per review, has 'review' + 'sentiment'
-    # aspect_global: one row per aspect mention, has 'review' + asp_sent_col
-    # We merge so each aspect row carries the whole-text sentiment,
-    # then normalise both columns to Title Case so labels always match.
+    # ── Build cor_aspect_df using a stable per-review id ────────────────────
+    # This mirrors the notebook's 1:M design:
+    # one row in main_global = one review
+    # many rows in aspect_global = many aspects for that review
+    # The crucial part is preserving the original review identifier rather than
+    # merging only on raw review text, which can collapse duplicate comments.
 
-    main_slim = (
-        main_global[['review', 'sentiment']]
-        .drop_duplicates('review')
-        .copy()
-        .rename(columns={'sentiment': 'whole_sentiment'})
-    )
-    main_slim['whole_sentiment'] = main_slim['whole_sentiment'].str.strip().str.title()
+    if 'review_id' in main_global.columns and 'review_id' in aspect_global.columns:
+        main_slim = (
+            main_global[['review_id', 'review', 'sentiment']]
+            .drop_duplicates('review_id')
+            .copy()
+            .rename(columns={'sentiment': 'whole_sentiment'})
+        )
+        main_slim['whole_sentiment'] = main_slim['whole_sentiment'].astype(str).str.strip().str.title()
 
-    aspect_slim = aspect_global[['review', asp_sent_col]].copy()
-    aspect_slim = aspect_slim.rename(columns={asp_sent_col: 'aspect_sentiment'})
-    aspect_slim['aspect_sentiment'] = aspect_slim['aspect_sentiment'].str.strip().str.title()
+        aspect_cols = ['review_id', 'review', asp_sent_col]
+        if 'aspect' in aspect_global.columns:
+            aspect_cols.append('aspect')
+        if 'confidence' in aspect_global.columns:
+            aspect_cols.append('confidence')
 
-    cor_aspect_df = aspect_slim.merge(main_slim, on='review', how='left')
+        aspect_slim = aspect_global[aspect_cols].copy()
+        aspect_slim = aspect_slim.rename(columns={asp_sent_col: 'aspect_sentiment'})
+        aspect_slim['aspect_sentiment'] = aspect_slim['aspect_sentiment'].astype(str).str.strip().str.title()
+
+        cor_aspect_df = aspect_slim.merge(
+            main_slim[['review_id', 'review', 'whole_sentiment']],
+            on=['review_id', 'review'],
+            how='left'
+        )
+    else:
+        st.warning(
+            "This session is missing stable `review_id` values, so RQ1 is falling back to "
+            "review-text matching. Re-run analysis once to get the corrected mapping."
+        )
+
+        main_slim = (
+            main_global[['review', 'sentiment']]
+            .drop_duplicates('review')
+            .copy()
+            .rename(columns={'sentiment': 'whole_sentiment'})
+        )
+        main_slim['whole_sentiment'] = main_slim['whole_sentiment'].astype(str).str.strip().str.title()
+
+        aspect_cols = ['review', asp_sent_col]
+        if 'aspect' in aspect_global.columns:
+            aspect_cols.append('aspect')
+        if 'confidence' in aspect_global.columns:
+            aspect_cols.append('confidence')
+
+        aspect_slim = aspect_global[aspect_cols].copy()
+        aspect_slim = aspect_slim.rename(columns={asp_sent_col: 'aspect_sentiment'})
+        aspect_slim['aspect_sentiment'] = aspect_slim['aspect_sentiment'].astype(str).str.strip().str.title()
+
+        cor_aspect_df = aspect_slim.merge(main_slim, on='review', how='left')
+        cor_aspect_df = cor_aspect_df.dropna(subset=['whole_sentiment', 'aspect_sentiment'])
+
+        review_ids = (
+            cor_aspect_df[['review']]
+            .drop_duplicates()
+            .reset_index(drop=True)
+            .reset_index()
+            .rename(columns={'index': 'review_id'})
+        )
+        cor_aspect_df = cor_aspect_df.merge(review_ids, on='review', how='left')
+
     cor_aspect_df = cor_aspect_df.dropna(subset=['whole_sentiment', 'aspect_sentiment'])
-
-    # Assign a stable integer review_id (one id per unique review text)
-    review_ids = (
-        cor_aspect_df[['review']]
-        .drop_duplicates()
-        .reset_index(drop=True)
-        .reset_index()
-        .rename(columns={'index': 'review_id'})
-    )
-    cor_aspect_df = cor_aspect_df.merge(review_ids, on='review', how='left')
 
     if len(cor_aspect_df) == 0:
         st.warning("Could not match aspect data to whole-text sentiment. Check that both analyses ran correctly.")

@@ -579,6 +579,9 @@ elif st.session_state.stage == 'analyze':
             # the Comparative and Per-group layers.
             full_df = st.session_state.get('df_clean', st.session_state.df).copy()
             full_df['review'] = full_df['review'].fillna('').astype(str)
+            if 'review_id' not in full_df.columns:
+                full_df = full_df.reset_index(drop=True)
+                full_df['review_id'] = full_df.index
 
             if run_sentiment:
                 status_text.text("📊 Running sentiment analysis...")
@@ -603,6 +606,7 @@ elif st.session_state.stage == 'analyze':
                     'aspect_df_full' not in st.session_state
                     or st.session_state.aspect_df_full is None
                     or len(st.session_state.aspect_df_full) == 0
+                    or 'review_id' not in st.session_state.aspect_df_full.columns
                 )
                 if need_aspect_global:
                     aspect = AspectAnalyzer()
