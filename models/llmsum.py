@@ -67,7 +67,7 @@ class LLMAnalyzer:
         """
 
         payload = {
-            "model": f"{self.model_name}:novita",
+            "model": f"{self.model_name}:fastest",
             "messages": [
                 {
                     "role": "system",
