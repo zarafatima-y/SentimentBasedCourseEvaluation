@@ -14,8 +14,9 @@ Upload one or more course evaluation PDFs and the application will:
 - Run whole-text sentiment analysis (Positive / Neutral / Negative)
 - Detect the dominant emotion per review (joy, sadness, anger, fear, surprise, neutral)
 - Break down sentiment by course aspect using a custom-built ABSA pipeline (no pre-trained aspect model). Reviews are split into sentences, a keyword dictionary maps each sentence to one of ten course aspects, and the same RoBERTa sentiment model used for whole-text analysis evaluates each sentence independently
+- Present **RQ1** as a project finding showing why aspect-based analysis reveals nuance that whole-text sentiment can miss
 - Compare results across sections, years, or different courses
-- Identify which aspects are most associated with negative evaluations across global, comparative, and per-group views (RQ2)
+- Identify which aspects are most associated with negative evaluations across global, comparative, and per-group views (**RQ2**)
 - Generate a plain-English faculty improvement report using an LLM
 - Export all results as CSV files or a comprehensive PDF report
 
@@ -33,13 +34,48 @@ Upload one or more course evaluation PDFs and the application will:
 
 The app walks you through four stages in the sidebar: Upload, Clean, Analyze, and Results.
 
-**Stage 1 — Upload.** Upload one or more course evaluation PDFs. The app expects PDFs containing an `ESSAY RESULTS` section with free-text student responses, and extracts the course code, academic year, and section automatically from the PDF header.
+**Stage 1 — Upload.** Upload one or more course evaluation PDFs and click **Process PDFs**. Each PDF must contain both an `ESSAY RESULTS` section and a `NUMERIC RESULTS` section in the same report. The app was built against that combined format. If only essay or only numeric content is present, the app will stop with a user-facing error instead of continuing.
 
-**Stage 2 — Clean.** Review the extracted data, select cleaning options (remove nulls, remove very short reviews, normalize text), and click Run Preprocessing.
+**Stage 2 — Clean.** Review the extracted data, select cleaning options (remove nulls, remove very short reviews, normalize text), and click **Run Preprocessing**.
 
-**Stage 3 — Analyze.** Select your analysis type, the courses or sections you want to include, and which analysis modules to run (sentiment, aspect, emotion). Click Run Selected Analysis.
+**Stage 3 — Analyze.** Select your analysis type, the courses or sections you want to include, and which analysis modules to run (sentiment, aspect, emotion). Click **Run Selected Analysis**.
 
 **Stage 4 — Results.** Results are displayed in a tabbed dashboard described below.
+
+### Step-by-Step Navigation
+
+1. **Upload**
+   Choose one or more PDFs and confirm the filenames shown on screen.
+2. **Process PDFs**
+   Click **Process PDFs**. If extraction succeeds, the app moves automatically to the cleaning stage.
+3. **Check the extracted rows**
+   Use the preview table to confirm that course code, year, section, question text, and review text were captured correctly.
+4. **Run cleaning**
+   Leave the default cleaning options on unless you have a specific reason to change them, then click **Run Preprocessing**.
+5. **Choose analysis type**
+   Decide whether you want a single-course view, section comparison, year comparison, or cross-course comparison.
+6. **Select analysis modules**
+   Enable the modules you want to run. Sentiment and aspect are the most important for the research-question tabs.
+7. **Generate results**
+   Click **Run Selected Analysis** and wait for the app to finish building the dashboard.
+8. **Read the dashboard from left to right**
+   Start with Overview, then move through Sentiment / Aspects / Emotions / LLM Summary / RQ1 / RQ2 / Numeric / Download depending on what was generated.
+9. **Generate written outputs if needed**
+   In the LLM tab, click the summary-generation control before downloading if you want the generated report included in the PDF export.
+10. **Download**
+    Use the Download tab for CSV exports and the full PDF report.
+
+### How to Read the Graphs
+
+- **Pie charts / grouped bars** show overall proportions or counts for sentiment categories.
+- **Heatmaps** show where values cluster. In sentiment-style heatmaps, stronger diagonal values mean stronger agreement; off-diagonal values indicate disagreement or mixed patterns.
+- **Radar charts** compare the same aspects across groups on one shape. Larger distance from the centre means a larger value.
+- **Trend lines** are most useful for year comparisons; focus on direction over time rather than tiny point-to-point changes.
+- **Aspect balance charts** compare positive and negative rates for the same aspect. Large gaps indicate clearer student consensus.
+
+### File Requirement Note
+
+Do **not** upload essay-only PDFs or numeric-only PDFs. The current app expects the original combined course-evaluation report format containing both sections. If a file is missing one section, extraction will stop and a friendly error message will be shown.
 
 ---
 
@@ -73,6 +109,17 @@ Total reviews, courses, years, and sections loaded, plus a review count breakdow
 - **Emotion distribution chart** — frequency of joy, anger, sadness, fear, surprise, neutral.
 - **Emotion × Sentiment heatmap** — how emotions co-occur with sentiment labels.
 - **Per-group heatmaps** — one per group, side by side.
+
+### RQ1: Sentiment Agreement
+
+**How often does whole-text sentiment agree with aspect-level sentiment?** This tab presents the project's RQ1 finding: whole-review sentiment can miss nuance that becomes visible once student comments are broken into aspect-level judgments.
+
+- **Purpose** — to justify why aspect-based analysis is worth doing rather than relying only on a single overall sentiment label per review.
+- **Displayed result** — a disagreement heatmap and summary metrics based on the project dataset used during the study.
+- **Interpretation** — diagonal cells indicate agreement between whole-text and aspect sentiment; off-diagonal cells indicate additional nuance captured by aspect analysis.
+- **Important note** — this tab is presented as a project finding, not as a live recalculation from whatever files happen to be uploaded during a later app session.
+
+This RQ1 framing follows the disagreement-analysis perspective discussed by Nashihin et al. (2025), where disagreement is treated as evidence that aspect-based analysis captures additional information beyond document-level sentiment.
 
 ### RQ2: Aspect Associations
 
@@ -113,6 +160,15 @@ A worked example: if you compare three courses where instructor negativity is 80
 #### Methodological note
 
 Because the course evaluation PDFs contain anonymous reviews, individual aspect mentions cannot be linked to individual overall ratings. The regression is therefore necessarily specified at the group level, with one observation per section, year, or course. This limits statistical power — the analysis is exploratory and descriptive rather than inferential. Coefficients indicate direction and relative importance, not statistical significance. This is a constraint imposed by the data structure, not a methodological choice.
+
+#### Research grounding
+
+This RQ2 view is motivated by prior work on document-level sentiment classification and aspect-level sentiment analysis:
+
+- Pang, Lee, and Vaithyanathan (2002): document-level sentiment classification overview via EMNLP. Link: https://aclanthology.org/W02-1011/
+- Schouten and Frasincar (2016): broad survey of aspect-level sentiment analysis methods. Link: https://pure.eur.nl/en/publications/survey-on-aspect-level-sentiment-analysis/
+
+In practical terms, the app uses those ideas to move from overall review polarity toward more actionable aspect-level signals for teaching improvement.
 
 ### LLM Summary
 Generates a plain-English faculty improvement report using Meta Llama 3 8B Instruct via the HuggingFace Inference API. The report acknowledges what students appreciate, identifies the top three areas of concern with specific recommendations, flags any aspects confirmed as problems by both essay and numeric data (Double Signal), and closes with an encouraging note. One paragraph is generated per group. Requires a valid HuggingFace token.
@@ -190,6 +246,7 @@ streamlit run app.py
 
 - Sentiment and emotion models are downloaded from HuggingFace on first run and cached locally.
 - The LLM summary runs via the HuggingFace cloud API and requires a valid token with access to the gated Llama 3 model.
+- The app expects the original PDF structure to contain both essay and numeric sections in the same report.
 - RQ2's comparative (regression) layer requires at least 2 groups. The global layer works with any amount of data. With only 2 groups R² = 1.0 by construction.
 - If your PDFs use a different format than expected, parsing logic can be adjusted in `data/loader.py`.
 
@@ -198,9 +255,9 @@ streamlit run app.py
 ## References
 
 - AI@Meta (2024). Llama 3 Model Card. https://github.com/meta-llama/llama3/blob/main/MODEL_CARD.md
-- Pang, B., Lee, L., & Vaithyanathan, S. (2002). Thumbs up? Sentiment classification using machine learning techniques. *EMNLP*.
-- Schouten, K., & Frasincar, F. (2016). Survey on aspect-level sentiment analysis. *IEEE Transactions on Knowledge and Data Engineering*, 28(3), 813–830.
-- Nashihin et al. (2025). Disagreement analysis framework for sentiment model evaluation.
+- Pang, B., Lee, L., & Vaithyanathan, S. (2002). *Thumbs up? Sentiment Classification using Machine Learning Techniques*. EMNLP 2002. https://aclanthology.org/W02-1011/
+- Schouten, K., & Frasincar, F. (2016). *Survey on Aspect-Level Sentiment Analysis*. IEEE Transactions on Knowledge and Data Engineering, 28(3), 813–830. https://pure.eur.nl/en/publications/survey-on-aspect-level-sentiment-analysis/
+- Nashihin, D., Lisnani, L., & Hanafi, I. (2025). *Disagreement Analysis of Sentiment Predictions on Student Satisfaction Surveys Using Two IndoBERT Models*. Brilliance: Research of Artificial Intelligence, 5(2), 965–972. https://jurnal.itscience.org/index.php/brilliance/article/view/7093
 
 ---
 
