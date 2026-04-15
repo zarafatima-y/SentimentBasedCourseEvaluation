@@ -159,7 +159,7 @@ if st.session_state.stage == 'upload':
             2. Each PDF must contain both an **ESSAY RESULTS** section and a **NUMERIC RESULTS** section
             3. The app was built for course evaluation PDFs that include both free-text reviews and numeric survey responses
             4. Based on the current PDF extraction regex, supported course prefixes are **EECS, MATH, CSSD, PHYS, ESSE, DIGT, TECL, CCCC, CIVL, ENG, MECH,** and **TRON**
-            5. These prefixes were chosen from York University's Courses Website under **Advanced Search by Faculty, Subject and Number** for the Lassonde project scope
+            5. These prefixes were chosen from York University's Courses Website under **Advanced Search by Faculty, Subject and Number** for the Lassonde School of Engineering. If your PDFs are from a different institution or have a different format, the extractor may not work correctly.
             6. Uploading PDFs with only essay data or only numeric data may cause analysis steps to fail, so those files are not supported
             7. The app reads: course code, academic year, section, response rate, and instructor name
             """
