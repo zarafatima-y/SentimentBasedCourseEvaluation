@@ -233,7 +233,8 @@ streamlit run app.py
 | ML | scikit-learn 1.3+ | OLS regression (RQ2) |
 | PDF | pdfplumber, PyPDF2 | Text extraction |
 | NLP | Transformers, PyTorch, NLTK | Model loading, tokenisation |
-| Sentiment Model | cardiffnlp/twitter-roberta-base-sentiment-latest | Whole-text and aspect-level sentiment |
+| Whole-Review Sentiment | cardiffnlp/twitter-roberta-base-sentiment-latest | Review-level sentiment labels |
+| Aspect Sentiment Model | cardiffnlp/twitter-roberta-base-sentiment-latest | Aspect-level sentiment |
 | Aspect Pipeline | Custom-built (keyword detection + sentence splitting) | No pre-trained ABSA model |
 | Emotion Model | j-hartmann/emotion-english-distilroberta-base | 7-class emotion detection |
 | LLM | meta-llama/Meta-Llama-3-8B-Instruct (HF API) | Faculty report generation |
@@ -258,6 +259,35 @@ streamlit run app.py
 - Pang, B., Lee, L., & Vaithyanathan, S. (2002). *Thumbs up? Sentiment Classification using Machine Learning Techniques*. EMNLP 2002. https://aclanthology.org/W02-1011/
 - Schouten, K., & Frasincar, F. (2016). *Survey on Aspect-Level Sentiment Analysis*. IEEE Transactions on Knowledge and Data Engineering, 28(3), 813–830. https://pure.eur.nl/en/publications/survey-on-aspect-level-sentiment-analysis/
 - Nashihin, D., Lisnani, L., & Hanafi, I. (2025). *Disagreement Analysis of Sentiment Predictions on Student Satisfaction Surveys Using Two IndoBERT Models*. Brilliance: Research of Artificial Intelligence, 5(2), 965–972. https://jurnal.itscience.org/index.php/brilliance/article/view/7093
+
+### Model References
+
+- Cardiff NLP. *twitter-roberta-base-sentiment-latest* model card. https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest
+- Hartmann, J. *emotion-english-distilroberta-base* model card. https://huggingface.co/j-hartmann/emotion-english-distilroberta-base
+- Meta. *Meta-Llama-3-8B-Instruct* model card. https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct
+
+### Major Library / Framework References
+
+- Streamlit documentation. https://docs.streamlit.io/
+- pandas documentation. https://pandas.pydata.org/docs/
+- NumPy documentation. https://numpy.org/doc/
+- SciPy documentation. https://docs.scipy.org/doc/scipy/
+- scikit-learn documentation. https://scikit-learn.org/stable/
+- Hugging Face Transformers documentation. https://huggingface.co/docs/transformers/
+- PyTorch documentation. https://pytorch.org/docs/stable/index.html
+- NLTK documentation. https://www.nltk.org/
+- RapidFuzz official site. https://rapidfuzz.com/
+- RapidFuzz GitHub repository. https://github.com/rapidfuzz/RapidFuzz
+- pdfplumber GitHub repository. https://github.com/jsvine/pdfplumber
+- PyPDF2 documentation. https://pypdf2.readthedocs.io/
+- Plotly for Python documentation. https://plotly.com/python/
+- Matplotlib documentation. https://matplotlib.org/stable/
+- Seaborn documentation. https://seaborn.pydata.org/
+- ReportLab documentation. https://docs.reportlab.com/
+- Kaleido GitHub repository. https://github.com/plotly/Kaleido
+- python-dotenv documentation. https://saurabh-kumar.com/python-dotenv/
+- Requests documentation. https://requests.readthedocs.io/
+- tqdm documentation. https://tqdm.github.io/
 
 ---
 
