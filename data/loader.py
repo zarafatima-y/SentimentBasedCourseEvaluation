@@ -6,6 +6,8 @@ from typing import List, Dict, Optional, Tuple
 class PDFLoader:
     """Handle PDF loading and text extraction — both essay and numeric results"""
 
+    COURSE_PREFIXES = "EECS|MATH|CSSD|PHYS|ESSE|DIGT|TECL|CCCC|CIVL|ENG|MECH|TRON"
+
     # Questions to keep (Hand picked during meetings with supervisor)
     KEEP_QUESTIONS = {
         'core':        {1, 4, 6},
@@ -26,7 +28,7 @@ class PDFLoader:
         section      = None
 
         course_match  = re.search(
-            r"Essay Results for:\s+.*?((?:EECS|MATH|CSSD)\s+\d{4})", block_text
+            rf"Essay Results for:\s+.*?((?:{self.COURSE_PREFIXES})\s+\d{{4}})", block_text
         )
         year_match    = re.search(r"Academic Year:\s+(\d+)", block_text)
         section_match = re.search(r"Section\(s\):\s+([A-Z, ]+)", block_text)
@@ -47,7 +49,7 @@ class PDFLoader:
         section       = None
 
         course_match  = re.search(
-            r"Numeric Results for:\s+.*?((?:EECS|MATH|CSSD)\s+\d{4})", block_text
+            rf"Numeric Results for:\s+.*?((?:{self.COURSE_PREFIXES})\s+\d{{4}})", block_text
         )
         year_match    = re.search(r"Academic Year:\s+(\d+)", block_text)
         section_match = re.search(r"Section\(s\):\s+([A-Z, ]+)", block_text)

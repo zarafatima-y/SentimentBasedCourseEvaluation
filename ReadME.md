@@ -36,6 +36,8 @@ The app walks you through four stages in the sidebar: Upload, Clean, Analyze, an
 
 **Stage 1 — Upload.** Upload one or more course evaluation PDFs and click **Process PDFs**. Each PDF must contain both an `ESSAY RESULTS` section and a `NUMERIC RESULTS` section in the same report. The app was built against that combined format. If only essay or only numeric content is present, the app will stop with a user-facing error instead of continuing.
 
+The current metadata extractor recognises course codes with these prefixes: **EECS, MATH, CSSD, PHYS, ESSE, DIGT, TECL, CCCC, CIVL, ENG, MECH,** and **TRON**. This list reflects the project scope and was aligned with York University's Courses Website under **Advanced Search by Faculty, Subject and Number** for Lassonde-related offerings.
+
 **Stage 2 — Clean.** Review the extracted data, select cleaning options (remove nulls, remove very short reviews, normalize text), and click **Run Preprocessing**.
 
 **Stage 3 — Analyze.** Select your analysis type, the courses or sections you want to include, and which analysis modules to run (sentiment, aspect, emotion). Click **Run Selected Analysis**.
@@ -45,7 +47,7 @@ The app walks you through four stages in the sidebar: Upload, Clean, Analyze, an
 ### Step-by-Step Navigation
 
 1. **Upload**
-   Choose one or more PDFs and confirm the filenames shown on screen.
+   Choose one or more PDFs and confirm the filenames shown on screen. Supported course prefixes are **EECS, MATH, CSSD, PHYS, ESSE, DIGT, TECL, CCCC, CIVL, ENG, MECH,** and **TRON**.
 2. **Process PDFs**
    Click **Process PDFs**. If extraction succeeds, the app moves automatically to the cleaning stage.
 3. **Check the extracted rows**
@@ -76,6 +78,27 @@ The app walks you through four stages in the sidebar: Upload, Clean, Analyze, an
 ### File Requirement Note
 
 Do **not** upload essay-only PDFs or numeric-only PDFs. The current app expects the original combined course-evaluation report format containing both sections. If a file is missing one section, extraction will stop and a friendly error message will be shown.
+
+### Supported Course Codes
+
+The current PDF metadata regex supports these subject prefixes only:
+
+- **EECS**
+- **MATH**
+- **CSSD**
+- **PHYS**
+- **ESSE**
+- **DIGT**
+- **TECL**
+- **CCCC**
+- **CIVL**
+- **ENG**
+- **MECH**
+- **TRON**
+
+This reflects the scope used for the project dataset. The list was based on York University's Courses Website under **Advanced Search by Faculty, Subject and Number** for Lassonde-related course offerings:
+
+- York University Courses Website — Advanced Search by Faculty, Subject and Number: https://w2prod.sis.yorku.ca/Apps/WebObjects/cdm.woa/wa/crsq1
 
 ---
 

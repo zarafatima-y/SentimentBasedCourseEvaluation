@@ -143,7 +143,7 @@ if st.session_state.stage == 'upload':
             "Choose PDF files to analyze",
             type=['pdf'],
             accept_multiple_files=True,
-            help="Upload course evaluation PDFs containing 'ESSAY RESULTS' sections"
+            help="Upload supported course evaluation PDFs containing both ESSAY RESULTS and NUMERIC RESULTS sections"
         )
 
         if uploaded_files:
@@ -158,8 +158,10 @@ if st.session_state.stage == 'upload':
             1. Upload one or more course evaluation PDFs
             2. Each PDF must contain both an **ESSAY RESULTS** section and a **NUMERIC RESULTS** section
             3. The app was built for course evaluation PDFs that include both free-text reviews and numeric survey responses
-            4. Uploading PDFs with only essay data or only numeric data may cause analysis steps to fail, so those files are not supported
-            5. The app reads: course code, academic year, section, response rate, and instructor name
+            4. Based on the current PDF extraction regex, supported course prefixes are **EECS, MATH, CSSD, PHYS, ESSE, DIGT, TECL, CCCC, CIVL, ENG, MECH,** and **TRON**
+            5. These prefixes were chosen from York University's Courses Website under **Advanced Search by Faculty, Subject and Number** for the Lassonde project scope
+            6. Uploading PDFs with only essay data or only numeric data may cause analysis steps to fail, so those files are not supported
+            7. The app reads: course code, academic year, section, response rate, and instructor name
             """
         )
         with st.expander("📎 Expected PDF Format"):
@@ -196,7 +198,7 @@ Instructor: instructor name
             st.markdown(
                 """
 **Step 1 — Upload**
-Select your PDF files. Each PDF must contain both the essay and numeric sections used in the original course evaluation reports. Once selected you will see a confirmation message showing how many files were uploaded. A red **Process PDFs** button will appear at the bottom of the page — click it to extract the data and move to the next stage.
+Select your PDF files. Each PDF must contain both the essay and numeric sections used in the original course evaluation reports. The current extractor supports course codes beginning with **EECS, MATH, CSSD, PHYS, ESSE, DIGT, TECL, CCCC, CIVL, ENG, MECH,** or **TRON**. Once selected you will see a confirmation message showing how many files were uploaded. A red **Process PDFs** button will appear at the bottom of the page — click it to extract the data and move to the next stage.
 
 **Step 2 — Clean**
 Review your cleaning options (remove nulls, short reviews, normalize text). Click the red **Run Preprocessing** button at the bottom to confirm and proceed.
