@@ -31,6 +31,7 @@ from ui.numeric_tab import render_numeric_tab
 from ui.rq2_tab import render_rq2_tab
 from ui.rq1_tab import render_rq1_tab
 from ui.download_tab import render_download_tab
+from ui.debug_dfs_tab import render_debug_dfs_tab
 
 
 # ---------------------------------------------------------------------------
@@ -794,6 +795,7 @@ elif st.session_state.stage == 'results':
             available_tabs.append("📉 RQ2: Aspect Predictors")
         if st.session_state.numeric_df is not None and len(st.session_state.numeric_df) > 0:
             available_tabs.append("🔢 Numeric Insights")
+        available_tabs.append("🧪 Debug DFs")
         available_tabs.append("📥 Download")
 
         tabs     = st.tabs(available_tabs)
@@ -836,6 +838,10 @@ elif st.session_state.stage == 'results':
         if "📉 RQ2: Aspect Predictors" in tab_dict:
             with tab_dict["📉 RQ2: Aspect Predictors"]:
                 render_rq2_tab(config)
+
+        if "🧪 Debug DFs" in tab_dict:
+            with tab_dict["🧪 Debug DFs"]:
+                render_debug_dfs_tab()
 
         #Download tab
         if "📥 Download" in tab_dict:
