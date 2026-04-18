@@ -9,10 +9,9 @@ import time
 from pathlib import Path
 import warnings
 
-# Add project root to path
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# Import all your modules
 from data.loader import PDFLoader
 from data.preprocessor import DataPreprocessor
 from models.sentiment import SentimentAnalyzer
@@ -21,7 +20,6 @@ from models.emotion import EmotionAnalyzer
 from utils.helpers import clean_review_for_merge, save_dataframes
 from utils.constants import ASPECT_KEYWORDS, EMOTION_TO_SENTIMENT
 
-# UI tab modules
 from ui.overview_tab import render_overview_tab
 from ui.sentiment_tab import render_sentiment_tab
 from ui.aspects_tab import render_aspects_tab
@@ -32,10 +30,6 @@ from ui.rq2_tab import render_rq2_tab
 from ui.rq1_tab import render_rq1_tab
 from ui.download_tab import render_download_tab
 
-
-# ---------------------------------------------------------------------------
-# Page configuration
-# ---------------------------------------------------------------------------
 
 st.set_page_config(
     page_title="Sentiment Based Course Evaluation Analysis System",
@@ -325,7 +319,7 @@ elif st.session_state.stage == 'preprocess':
 
                 st.session_state.processing_time['cleaning'] = time.time() - start_time
                 st.success(f"‼️ Cleaning complete — {len(st.session_state.df)} reviews remaining")
-                # Stable baseline for RQ2 Global layer — no analysis columns yet.
+                # Stable baseline for RQ2 Global layer since no analysis columns yet.
                 st.session_state.df_clean = st.session_state.df.copy()
                 st.session_state.pop('aspect_df_full', None)
                 st.session_state.stage = 'analyze'
