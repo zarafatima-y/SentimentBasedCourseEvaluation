@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from ui.helpers import COLOR_MAP
+from ui.heatmapstruct import COLOR_MAP
 
 
 def render_overview_tab(config):

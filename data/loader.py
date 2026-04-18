@@ -253,7 +253,7 @@ class PDFLoader:
         """
         Within each (course, year, section, subsection, question) group,
         keep only the answer rows that cumulatively account for
-        CUMULATIVE_THRESHOLD of all responses, working from highest
+        CUMULATIVE_THRESHOLD of all responses ie 75%, working from highest
         frequency downward.
 
         Answer value 0 (Not Applicable) is always dropped first as it

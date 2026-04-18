@@ -4,7 +4,7 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 
 from analysis.visualization import Visualizer
-from ui.helpers import build_aspect_heatmap
+from ui.heatmapstruct import build_aspect_heatmap
 
 
 def render_aspects_tab(config, viz_options):

@@ -31,7 +31,7 @@ class Visualizer:
             return None, None
 
         angles = [n / float(N) * 2 * np.pi for n in range(N)]
-        angles += angles[:1]   # close loop
+        angles += angles[:1]   
 
         fig, ax = plt.subplots(figsize=(8, 6), subplot_kw=dict(polar=True))
 
@@ -93,7 +93,7 @@ class Visualizer:
                     total = len(asp_sub)
                     neg   = (asp_sub[sentiment_col] == 'Negative').sum() if total > 0 else 0
                     values.append(round(neg / total * 100, 1) if total > 0 else 0.0)
-            else:   # pos_pct
+            else:   
                 values = []
                 for asp in top_aspects:
                     asp_sub = sub[sub['aspect'] == asp]

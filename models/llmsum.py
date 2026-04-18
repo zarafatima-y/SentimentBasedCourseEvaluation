@@ -14,18 +14,16 @@ class LLMAnalyzer:
         self,
         model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct",
         hf_token: str = None,
-        **kwargs,   # absorb any leftover kwargs from old call sites
+        **kwargs,  
     ):
         self.model_name = model_name
         self.hf_token   = hf_token
-        # HuggingFace router — OpenAI-compatible chat completions endpoint
         self.api_url    = "https://router.huggingface.co/v1/chat/completions"
         self.headers    = {
             "Authorization": f"Bearer {hf_token}",
             "Content-Type":  "application/json",
         }
 
-    # ── Data preparation (unchanged) ─────────────────────────────────────────
 
     def prepare_llm_data(
         self,
@@ -58,7 +56,6 @@ class LLMAnalyzer:
         llm_ready['num_aspects']   = llm_ready['aspects_found'].apply(len)
         return llm_ready
 
-    # ── Generation ───────────────────────────────────────────────────────────
 
     def generate_summary(self, prompt: str, max_length: int = 500) -> str:
         """

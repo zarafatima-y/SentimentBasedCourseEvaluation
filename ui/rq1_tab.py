@@ -63,8 +63,7 @@ def render_rq1_tab():
             ax=ax,
         )
         ax.set_title(
-            "Disagreement Heatmap: Whole-Text vs. Aspect Sentiment\n"
-            "(Darker green = agreement, Darker red = disagreement)",
+            "Disagreement Heatmap: Whole-Text vs. Aspect Sentiment\n",
             fontsize=15,
             pad=18,
         )

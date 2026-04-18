@@ -596,11 +596,6 @@ elif st.session_state.stage == 'analyze':
                 'radar': show_radar
             }
 
-            # ── Global baseline (all uploaded data) ──────────────────────────────
-            # Always start from the full clean snapshot so analysis runs on every
-            # review, not just the Stage 3 selection.  df_full / aspect_df_full are
-            # consumed by RQ2's Global layer; filtered_df / aspect_df are used by
-            # the Comparative and Per-group layers.
             full_df = st.session_state.get('df_clean', st.session_state.df).copy()
             full_df['review'] = full_df['review'].fillna('').astype(str)
             if 'review_id' not in full_df.columns:
@@ -624,8 +619,6 @@ elif st.session_state.stage == 'analyze':
                 status_text.text("🔍 Extracting aspects and analyzing sentiment...")
                 start_time = time.time()
 
-                # Only re-run aspect on the full dataset when we don't already have
-                # a complete snapshot (i.e. first run after a clean or re-upload).
                 need_aspect_global = (
                     'aspect_df_full' not in st.session_state
                     or st.session_state.aspect_df_full is None
@@ -701,8 +694,7 @@ elif st.session_state.stage == 'analyze':
                 llm_ready_full['num_aspects'] = llm_ready_full['aspects_found'].apply(len)
                 st.session_state.llm_ready_full = llm_ready_full
 
-            # ── Stage 3 filter ────────────────────────────────────────────────────
-            # Filter the fully-analyzed full_df down to the user's selection.
+        
             filtered_df = full_df.copy()
 
             if analysis_type == "📚 Single Course Analysis":
@@ -736,7 +728,6 @@ elif st.session_state.stage == 'analyze':
 
             st.session_state.filtered_df = filtered_df
 
-            # Filter aspect_df_full to the Stage 3 selection by matching review text.
             if run_aspect:
                 full_adf_snap = st.session_state.get('aspect_df_full')
                 if full_adf_snap is not None and len(full_adf_snap) > 0 and 'review' in full_adf_snap.columns:

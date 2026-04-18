@@ -142,7 +142,7 @@ def render_llm_tab(config):
                         best_grp  = gv
             return best_grp, best_neg
 
-        # Cross-group synthesis: aspects that are weak in some groups but strong in others
+        # Cross-group synthesis: aspects that are weak in some groups but strong in others ie double signals
         all_asp_set = set()
         for profile in all_profiles.values():
             all_asp_set.update(profile.keys())
@@ -338,6 +338,8 @@ def render_llm_tab(config):
             )
         else:
             overall_sent = "N/A"
+
+        #Context section of prompt to reduce hallucinations and ground the LLM in the actual data available for this report
 
         if config['type'] == "🔄 Compare Sections (Same Course, Same Year)":
             context_str = (

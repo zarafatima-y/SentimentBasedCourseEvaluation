@@ -335,7 +335,7 @@ def build_pdf(config, run_options):
             styles['Body']
         ))
 
-        # Aspect frequency chart
+    
         fig_asp = build_aspect_bar(adf, sentiment_col, config)
         img_asp = fig_to_image(fig_asp, width_cm=15, height_cm=7)
         if img_asp:
@@ -346,8 +346,6 @@ def build_pdf(config, run_options):
             ))
 
         story.append(Spacer(1, 0.3 * cm))
-
-        # Aspect sentiment balance chart
         story.append(Paragraph('Aspect Sentiment Balance', styles['H2']))
         story.append(Paragraph(
             'This chart shows for each aspect what percentage of its mentions were positive (green) '
@@ -366,7 +364,6 @@ def build_pdf(config, run_options):
                     styles['Caption']
                 ))
 
-        # Top negative aspects table
         story.append(Spacer(1, 0.3 * cm))
         story.append(Paragraph('Top Negative Aspects', styles['H2']))
         asp_summary = adf.groupby(['aspect', sentiment_col]).size().unstack(fill_value=0)
@@ -406,7 +403,6 @@ def build_pdf(config, run_options):
                 styles['Caption']
             ))
 
-        # Emotion × sentiment table
         if 'sentiment' in df.columns:
             story.append(Spacer(1, 0.3 * cm))
             pivot = pd.crosstab(df['dominant_emotion'], df['sentiment'])
@@ -442,7 +438,6 @@ def build_pdf(config, run_options):
         ))
         story.append(Spacer(1, 0.3 * cm))
 
-        # Split into paragraphs and render each
         for para in llm_summary.split('\n\n'):
             para = para.strip()
             if para:

@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-from ui.helpers import COLOR_MAP
+from ui.heatmapstruct import COLOR_MAP
 
 
 def render_sentiment_tab(config):
